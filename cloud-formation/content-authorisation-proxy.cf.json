@@ -25,7 +25,17 @@
         "Stage": {
             "Type" : "String",
             "Description" : "Applied directly as a tag",
-            "Default" : "PROD"
+            "Default": "PROD",
+            "AllowedValues": [ "CODE", "PROD" ]
+        }
+    },
+    "Mappings": {
+        "CollectorDomainName": {
+            "PROD": {
+                "HostedZoneName": "cas-beta.guardianapis.com.",
+                "DomainName": "cas-beta.guardianapis.com.",
+                "CertificateName": "cas-beta.guardianapis.com"
+            }
         }
     },
     "Resources" : {
@@ -148,7 +158,7 @@
                     "LoadBalancerPort": "443",
                     "InstancePort": 9000,
                     "Protocol": "HTTPS",
-                    "SSLCertificateId" : { "Fn::Join" : [ "", [ "arn:aws:iam::", {"Ref":"AWS::AccountId"}, ":server-certificate/cas-beta.guardianapis.com" ] ] }
+                    "SSLCertificateId" : { "Fn::Join" : [ "", [ "arn:aws:iam::", {"Ref":"AWS::AccountId"}, ":server-certificate/", { "Fn::FindInMap": ["CollectorDomainName", {"Ref": "Stage" }, "CertificateName"]} ] ] }
                 }],
                 "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
                 "Subnets" : { "Ref" : "Subnets" },
@@ -193,10 +203,10 @@
         "CASProxyELBDNSrecord" : {
             "Type" : "AWS::Route53::RecordSet",
             "Properties" : {
-                "HostedZoneId" : "/hostedzone/Z2LN31BPOUYL7D",
+                "HostedZoneName" : { "Fn::FindInMap": ["CollectorDomainName", {"Ref": "Stage" }, "HostedZoneName"]},
                 "Comment" : "CNAME for AWS ELB",
-                "Name" :  "cas-beta.guardianapis.com.",
-                "Type" : "CNAME",
+                "Name" :  { "Fn::FindInMap": ["CollectorDomainName", {"Ref": "Stage" }, "DomainName"]},
+                "Type" : "A",
                 "TTL" : "120",
                 "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
             }
