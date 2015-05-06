@@ -21,3 +21,16 @@ libraryDependencies ++= {
     "io.spray"            %%  "spray-client"  % sprayV,
     "com.typesafe.akka"   %%  "akka-actor"    % akkaV)
 }
+
+lazy val root = (project in file("."))
+  .enablePlugins(RiffRaffArtifact)
+  .enablePlugins(SbtNativePackager)
+  .enablePlugins(JavaAppPackaging)
+
+riffRaffPackageType := (packageBin in config("universal")).value
+
+riffRaffArtifactResources ++= Seq()
+
+addCommandAlias("devrun", "re-start --- -Dconfig.resource=DEV.conf")
+
+Revolver.settings
