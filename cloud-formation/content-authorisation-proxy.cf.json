@@ -207,6 +207,10 @@
                 "Comment" : "CNAME for AWS ELB",
                 "Name" :  { "Fn::FindInMap": ["CollectorDomainName", {"Ref": "Stage" }, "DomainName"]},
                 "Type" : "A",
+                "AliasTarget" : {
+                    "HostedZoneId" : { "Fn::GetAtt" : ["CASProxyElasticLoadBalancer", "CanonicalHostedZoneNameID"] },
+                    "DNSName" : { "Fn::GetAtt" : ["CASProxyElasticLoadBalancer","CanonicalHostedZoneName"] }
+                },
                 "TTL" : "120",
                 "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
             }
