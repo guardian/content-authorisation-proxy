@@ -38,7 +38,6 @@
                 "LaunchConfigurationName" : { "Ref" : "CASProxyLaunchConfig" },
                 "MinSize" : "3",
                 "MaxSize" : "6",
-                "DesiredCapacity" : "3",
                 "LoadBalancerNames" : [ { "Ref" : "CASProxyElasticLoadBalancer" } ],
                 "HealthCheckType" : "ELB",
                 "HealthCheckGracePeriod" : 300,
