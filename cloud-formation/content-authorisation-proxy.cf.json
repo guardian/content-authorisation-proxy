@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description" : "subscriptions-app",
+    "Description" : "content-authorisation-proxy-app",
     "Parameters" : {
         "VpcId" : {
             "Type" : "String",
@@ -49,27 +49,27 @@
     },
     "Resources" : {
 
-        "FrontendAutoScalingGroup" : {
+        "CASProxyAutoScalingGroup" : {
             "Type" : "AWS::AutoScaling::AutoScalingGroup",
             "Properties" : {
                 "AvailabilityZones" : { "Fn::GetAZs" : "" },
                 "VPCZoneIdentifier" : { "Ref" : "Subnets" },
-                "LaunchConfigurationName" : { "Ref" : "FrontendLaunchConfig" },
+                "LaunchConfigurationName" : { "Ref" : "CASProxyLaunchConfig" },
                 "MinSize" : "3",
                 "MaxSize" : "6",
                 "DesiredCapacity" : "3",
-                "LoadBalancerNames" : [ { "Ref" : "FrontendElasticLoadBalancer" } ],
+                "LoadBalancerNames" : [ { "Ref" : "CASProxyElasticLoadBalancer" } ],
                 "HealthCheckType" : "ELB",
                 "HealthCheckGracePeriod" : 300,
                 "Tags" : [
                     { "Key" : "Stack", "Value" : { "Ref" : "Stack" }, "PropagateAtLaunch" : "true" },
-                    { "Key" : "App", "Value" : "frontend", "PropagateAtLaunch" : "true" },
+                    { "Key" : "App", "Value" : "content-authorisation-proxy", "PropagateAtLaunch" : "true" },
                     { "Key" : "Stage", "Value" : { "Ref" : "Stage" }, "PropagateAtLaunch" : "true"  }
                 ]
             }
         },
 
-        "FrontendLaunchConfig" : {
+        "CASProxyLaunchConfig" : {
             "Type" : "AWS::AutoScaling::LaunchConfiguration",
             "Properties" : {
                 "ImageId" : { "Ref": "ImageId" },
@@ -82,11 +82,11 @@
                     "Fn::Join":["\n", [
                         "#!/bin/bash -ev",
 
-                        "CONF_DIR=/subscriptions/subscriptions-frontend-1.0-SNAPSHOT/conf",
+                        "CONF_DIR=/subscriptions/content-authorisation-proxy-1.0-SNAPSHOT/conf",
 
                         {"Fn::Join":["", ["wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/authorized_keys &"]]},
                         "apt-get -y update",
-                        {"Fn::Join":["", ["echo https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/frontend/app.zip > /etc/gu-artifact-url" ]]},
+                        {"Fn::Join":["", ["echo https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/app.zip > /etc/gu-artifact-url" ]]},
 
                         "adduser --system --home /subscriptions --disabled-password subscriptions",
 
@@ -103,11 +103,11 @@
                             " $CONF_DIR/logger.conf"]]},
                         {"Fn::Join": [" ", ["python awslogs-agent-setup.py -nr", { "Ref": "AWS::Region" }, "-c $CONF_DIR/logger.conf" ]]},
 
-                        {"Fn::Join":["", ["sed 's/__STAGE/", { "Ref" : "Stage" } ,"/' $CONF_DIR/upstart.conf > /etc/init/subscriptions-app.conf"]]},
+                        {"Fn::Join":["", ["sed 's/__STAGE/", { "Ref" : "Stage" } ,"/' $CONF_DIR/upstart.conf > /etc/init/content-authorisation-proxy-app.conf"]]},
 
                         "chown -R subscriptions /subscriptions/",
 
-                        "start subscriptions-app"
+                        "start content-authorisation-proxy-app"
                     ]]
                 }}
             }
@@ -161,7 +161,7 @@
             }
         },
 
-        "FrontendElasticLoadBalancer" : {
+        "CASProxyElasticLoadBalancer" : {
             "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
             "Properties" : {
                 "Listeners" : [ {
@@ -210,7 +210,7 @@
                 ]
             }
         },
-        "FrontendELBDNSrecord" : {
+        "CASProxyELBDNSrecord" : {
             "Type" : "AWS::Route53::RecordSet",
             "Properties" : {
                 "HostedZoneId" : "/hostedzone/Z2LN31BPOUYL7D",
@@ -218,14 +218,14 @@
                 "Name" :  { "Fn::Join" : [ ".", [ { "Ref" : "SiteDomain" }, "origin.subscriptions.guardianapis.com." ] ] },
                 "Type" : "CNAME",
                 "TTL" : "120",
-                "ResourceRecords" : [ {"Fn::GetAtt":["FrontendElasticLoadBalancer","DNSName"]} ]
+                "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
             }
         }
     },
     "Outputs": {
         "URL" : {
-            "Description" : "URL of the Frontend website",
-            "Value" :  { "Fn::Join" : [ "", [ "http://", { "Fn::GetAtt" : [ "FrontendElasticLoadBalancer", "DNSName" ]}]]}
+            "Description" : "URL of the content-authorisation-proxy website",
+            "Value" :  { "Fn::Join" : [ "", [ "http://", { "Fn::GetAtt" : [ "CASProxyElasticLoadBalancer", "DNSName" ]}]]}
         }
     }
 }
