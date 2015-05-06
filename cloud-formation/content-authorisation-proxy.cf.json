@@ -156,14 +156,14 @@
             "Properties" : {
                 "Listeners" : [ {
                     "LoadBalancerPort": "443",
-                    "InstancePort": 9000,
+                    "InstancePort": 9300,
                     "Protocol": "HTTPS",
                     "SSLCertificateId" : { "Fn::Join" : [ "", [ "arn:aws:iam::", {"Ref":"AWS::AccountId"}, ":server-certificate/", { "Fn::FindInMap": ["CollectorDomainName", {"Ref": "Stage" }, "CertificateName"]} ] ] }
                 }],
                 "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
                 "Subnets" : { "Ref" : "Subnets" },
                 "HealthCheck" : {
-                    "Target" : "HTTP:9000/healthcheck",
+                    "Target" : "HTTP:9300/healthcheck",
                     "HealthyThreshold" : "2",
                     "UnhealthyThreshold" : "2",
                     "Interval" : "10",
@@ -178,13 +178,13 @@
         "LoadBalancerSecurityGroup" : {
             "Type" : "AWS::EC2::SecurityGroup",
             "Properties" : {
-                "GroupDescription" : "Permit incoming HTTPS access on port 443, egress to port 9000",
+                "GroupDescription" : "Permit incoming HTTPS access on port 443, egress to port 9300",
                 "VpcId" : { "Ref" : "VpcId" },
                 "SecurityGroupIngress" : [
                     { "IpProtocol": "tcp", "FromPort": "443", "ToPort": "443", "CidrIp": "0.0.0.0/0"}
                 ],
                 "SecurityGroupEgress" : [
-                    { "IpProtocol": "tcp", "FromPort": "9000", "ToPort": "9000", "CidrIp": "0.0.0.0/0" }
+                    { "IpProtocol": "tcp", "FromPort": "9300", "ToPort": "9300", "CidrIp": "0.0.0.0/0" }
                 ]
             }
         },
@@ -195,8 +195,8 @@
                 "VpcId" : { "Ref" : "VpcId" },
                 "SecurityGroupIngress" : [
                     { "IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": "77.91.248.0/21" },
-                    { "IpProtocol": "tcp", "FromPort": "9000", "ToPort": "9000", "CidrIp": "77.91.248.0/21" },
-                    { "IpProtocol": "tcp", "FromPort": "9000", "ToPort": "9000", "SourceSecurityGroupId" : { "Ref" : "LoadBalancerSecurityGroup" } }
+                    { "IpProtocol": "tcp", "FromPort": "9300", "ToPort": "9300", "CidrIp": "77.91.248.0/21" },
+                    { "IpProtocol": "tcp", "FromPort": "9300", "ToPort": "9300", "SourceSecurityGroupId" : { "Ref" : "LoadBalancerSecurityGroup" } }
                 ]
             }
         },
