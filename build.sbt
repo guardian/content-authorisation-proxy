@@ -24,8 +24,7 @@ libraryDependencies ++= {
 
 lazy val root = (project in file("."))
   .enablePlugins(RiffRaffArtifact)
-  .enablePlugins(SbtNativePackager)
-  .enablePlugins(JavaAppPackaging)
+  .enablePlugins(UniversalPlugin)
 
 riffRaffPackageType := (packageBin in config("universal")).value
 
