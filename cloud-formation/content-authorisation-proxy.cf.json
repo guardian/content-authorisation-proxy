@@ -26,10 +26,6 @@
             "Type" : "String",
             "Description" : "Applied directly as a tag",
             "Default" : "PROD"
-        },
-        "SiteDomain" : {
-            "Description" : "Site domain Name",
-            "Type" : "String"
         }
     },
     "Resources" : {
@@ -153,7 +149,7 @@
                     "LoadBalancerPort": "443",
                     "InstancePort": 9000,
                     "Protocol": "HTTPS",
-                    "SSLCertificateId" : { "Fn::Join" : [ "", [ "arn:aws:iam::", {"Ref":"AWS::AccountId"}, ":server-certificate/", { "Ref" : "SiteDomain" } ] ] }
+                    "SSLCertificateId" : { "Fn::Join" : [ "", [ "arn:aws:iam::", {"Ref":"AWS::AccountId"}, ":server-certificate/cas-beta.guardianapis.com" ] ] }
                 }],
                 "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
                 "Subnets" : { "Ref" : "Subnets" },
@@ -200,7 +196,7 @@
             "Properties" : {
                 "HostedZoneId" : "/hostedzone/Z2LN31BPOUYL7D",
                 "Comment" : "CNAME for AWS ELB",
-                "Name" :  { "Fn::Join" : [ ".", [ { "Ref" : "SiteDomain" }, "origin.subscriptions.guardianapis.com." ] ] },
+                "Name" :  "cas-beta.guardianapis.com.",
                 "Type" : "CNAME",
                 "TTL" : "120",
                 "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
