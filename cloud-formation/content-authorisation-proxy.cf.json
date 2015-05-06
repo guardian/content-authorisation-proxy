@@ -30,10 +30,6 @@
         "SiteDomain" : {
             "Description" : "Site domain Name",
             "Type" : "String"
-        },
-        "ImageId": {
-            "Description": "AMI ID",
-            "Type": "String"
         }
     },
     "Resources" : {
@@ -61,7 +57,7 @@
         "CASProxyLaunchConfig" : {
             "Type" : "AWS::AutoScaling::LaunchConfiguration",
             "Properties" : {
-                "ImageId" : { "Ref": "ImageId" },
+                "ImageId" : "i-1ab988fc",
                 "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
                 "InstanceType" : "t2.micro",
                 "KeyName" : { "Ref" : "KeyName" },
