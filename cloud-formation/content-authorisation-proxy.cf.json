@@ -15,7 +15,7 @@
         "Stack": {
             "Type": "String",
             "Description": "Applied directly as a tag",
-            "Default" : "subscriptions"
+            "Default" : "content-authorisation-proxy"
         },
         "KeyName" : {
             "Description" : "The EC2 Key Pair to allow SSH access to the instance",
@@ -62,7 +62,7 @@
         "CASProxyLaunchConfig" : {
             "Type" : "AWS::AutoScaling::LaunchConfiguration",
             "Properties" : {
-                "ImageId" : "i-1ab988fc",
+                "ImageId" : "ami-914924e6",
                 "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
                 "InstanceType" : "t2.micro",
                 "KeyName" : { "Ref" : "KeyName" },
@@ -76,13 +76,13 @@
 
                         {"Fn::Join":["", ["wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/authorized_keys &"]]},
                         "apt-get -y update",
-                        {"Fn::Join":["", ["echo https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/app.zip > /etc/gu-artifact-url" ]]},
+                        {"Fn::Join":["", ["echo https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/content-authorisation-proxy-0.1.zip > /etc/gu-artifact-url" ]]},
 
                         "adduser --system --home /subscriptions --disabled-password subscriptions",
 
                         "wget -i /etc/gu-artifact-url --directory-prefix=/tmp",
 
-                        "unzip -d /subscriptions /tmp/app.zip",
+                        "unzip -d /subscriptions /tmp/content-authorisation-proxy-0.1.zip",
 
                         "mkdir /etc/gu",
 
@@ -208,10 +208,8 @@
                 "Type" : "A",
                 "AliasTarget" : {
                     "HostedZoneId" : { "Fn::GetAtt" : ["CASProxyElasticLoadBalancer", "CanonicalHostedZoneNameID"] },
-                    "DNSName" : { "Fn::GetAtt" : ["CASProxyElasticLoadBalancer","CanonicalHostedZoneName"] }
-                },
-                "TTL" : "120",
-                "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
+                    "DNSName" : { "Fn::GetAtt" : ["CASProxyElasticLoadBalancer", "CanonicalHostedZoneName"] }
+                }
             }
         }
     },
