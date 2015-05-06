@@ -1,0 +1,19 @@
+{
+  "defaultStacks": ["subscriptions"],
+  "packages":{
+    "content-authorisation-proxy":{
+      "type":"autoscaling",
+      "data":{
+        "bucket": "subscriptions-dist"
+      }
+    }
+  },
+  "recipes":{
+    "default":{
+      "actionsBeforeApp": ["content-authorisation-proxy.uploadArtifacts", "content-authorisation-proxy.deploy"]
+    },
+    "artifactUploadOnly": {
+      "actions": [ "content-authorisation-proxy.uploadArtifacts" ]
+    }
+  }
+}
