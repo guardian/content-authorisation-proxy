@@ -31,11 +31,6 @@
             "Description" : "Site domain Name",
             "Type" : "String"
         },
-        "AllowedIngressIps" : {
-            "Description" : "IP address range (CIDR) that access the site (e.g. '77.91.248.0/21'- Internal Guardian, or '0.0.0.0/0' - the whole internet!)",
-            "Type" : "String",
-            "Default" : "0.0.0.0/0"
-        },
         "InstanceType" : {
             "Type" : "String",
             "Description" : "EC2 instance type",
@@ -191,7 +186,7 @@
                 "GroupDescription" : "Permit incoming HTTPS access on port 443, egress to port 9000",
                 "VpcId" : { "Ref" : "VpcId" },
                 "SecurityGroupIngress" : [
-                    { "IpProtocol": "tcp", "FromPort": "443", "ToPort": "443", "CidrIp": { "Ref" : "AllowedIngressIps" } }
+                    { "IpProtocol": "tcp", "FromPort": "443", "ToPort": "443", "CidrIp": "0.0.0.0/0"}
                 ],
                 "SecurityGroupEgress" : [
                     { "IpProtocol": "tcp", "FromPort": "9000", "ToPort": "9000", "CidrIp": "0.0.0.0/0" }
