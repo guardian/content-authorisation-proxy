@@ -72,7 +72,7 @@
                     "Fn::Join":["\n", [
                         "#!/bin/bash -ev",
 
-                        "CONF_DIR=/subscriptions/content-authorisation-proxy/conf",
+                        "CONF_DIR=/subscriptions/content-authorisation-proxy-0.1/conf",
 
                         {"Fn::Join":["", ["wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/authorized_keys &"]]},
 
