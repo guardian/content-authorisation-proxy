@@ -15,7 +15,7 @@
         "Stack": {
             "Type": "String",
             "Description": "Applied directly as a tag",
-            "Default" : "content-authorisation-proxy"
+            "Default" : "subscriptions"
         },
         "KeyName" : {
             "Description" : "The EC2 Key Pair to allow SSH access to the instance",
@@ -75,7 +75,9 @@
                         "CONF_DIR=/subscriptions/content-authorisation-proxy/conf",
 
                         {"Fn::Join":["", ["wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/authorized_keys &"]]},
+
                         "apt-get -y update",
+
                         {"Fn::Join":["", ["echo https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/content-authorisation-proxy-0.1.zip > /etc/gu-artifact-url" ]]},
 
                         "adduser --system --home /subscriptions --disabled-password subscriptions",
