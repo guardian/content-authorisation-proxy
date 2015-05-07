@@ -27,14 +27,9 @@ lazy val root = (project in file("."))
   .enablePlugins(SbtNativePackager)
   .enablePlugins(JavaAppPackaging)
 
-riffRaffPackageType := (packageBin in config("universal")).value
+mappings in Universal ++= NativePackagerHelper.contentOf("cloudformation/resources")
 
-riffRaffArtifactResources ++= Seq(
-  baseDirectory.value / "cloudformation" / "upstart.conf" ->
-    "packages/content-authorisation-proxy/upstart.conf",
-  baseDirectory.value / "cloudformation" / "logger.conf" ->
-    "packages/content-authorisation-proxy/logger.conf"
-)
+riffRaffPackageType := (packageBin in config("universal")).value
 
 addCommandAlias("devrun", "re-start --- -Dconfig.resource=DEV.conf")
 
