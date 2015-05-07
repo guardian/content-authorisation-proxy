@@ -29,7 +29,12 @@ lazy val root = (project in file("."))
 
 riffRaffPackageType := (packageBin in config("universal")).value
 
-riffRaffArtifactResources ++= Seq()
+riffRaffArtifactResources ++= Seq(
+  baseDirectory.value / "cloudformation" / "upstart.conf" ->
+    "packages/content-authorisation-proxy/upstart.conf",
+  baseDirectory.value / "cloudformation" / "logger.conf" ->
+    "packages/content-authorisation-proxy/logger.conf"
+)
 
 addCommandAlias("devrun", "re-start --- -Dconfig.resource=DEV.conf")
 
