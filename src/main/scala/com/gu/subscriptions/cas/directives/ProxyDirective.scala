@@ -21,7 +21,6 @@ trait ProxyDirective extends Directives {
 
   import actorSystem.dispatcher
 
-  val securePort = 443
   val proxyRoute = (get|post) { ctx: RequestContext =>
 
     val newRequest = ctx.request.copy(
