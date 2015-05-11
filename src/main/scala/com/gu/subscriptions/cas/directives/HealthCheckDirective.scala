@@ -1,16 +1,14 @@
 package com.gu.subscriptions.cas.directives
 
-import com.typesafe.config.ConfigFactory
+import com.gu.subscriptions.cas.Configuration.appConfig
 import spray.http.MediaTypes._
 import spray.routing.{HttpService, Route}
 
 trait HealthCheckDirective {this: HttpService =>
 
-  val conf = ConfigFactory.load()
-
   val checkConfig = List(
     "proxy"
-  ).filter(conf.getString(_) == null)
+  ).filter(appConfig.getString(_) == null)
 
   val healthCheck: Route =
     get {
