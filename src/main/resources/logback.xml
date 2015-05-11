@@ -3,7 +3,7 @@
     <contextName>identity-oauth</contextName>
 
     <appender name="LOGFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/identity-oauth.log</file>
+        <file>logs/cas-proxy.log</file>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>logs/identity-oauth.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
