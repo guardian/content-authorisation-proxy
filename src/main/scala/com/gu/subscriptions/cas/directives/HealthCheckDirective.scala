@@ -9,7 +9,7 @@ trait HealthCheckDirective {this: HttpService =>
   val conf = ConfigFactory.load()
 
   val checkConfig = List(
-    "proxy.url"
+    "proxy"
   ).filter(conf.getString(_) == null)
 
   val healthCheck: Route =
