@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
-import com.gu.subscriptions.cas.Configuration.{proxyHost, proxyPort, proxyScheme}
+import com.gu.subscriptions.cas.config.Configuration.{proxyHost, proxyPort, proxyScheme}
 import spray.can.Http
 import spray.http.HttpHeaders.Host
 import spray.http.{HttpRequest, HttpResponse}

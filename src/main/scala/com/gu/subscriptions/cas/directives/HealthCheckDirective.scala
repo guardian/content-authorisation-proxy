@@ -1,6 +1,6 @@
 package com.gu.subscriptions.cas.directives
 
-import com.gu.subscriptions.cas.Configuration.appConfig
+import com.gu.subscriptions.cas.config.Configuration.appConfig
 import spray.http.MediaTypes._
 import spray.routing.{HttpService, Route}
 
