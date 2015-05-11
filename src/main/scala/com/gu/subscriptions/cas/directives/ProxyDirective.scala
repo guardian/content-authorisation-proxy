@@ -7,6 +7,7 @@ import akka.util.Timeout
 import com.gu.subscriptions.cas.config.Configuration.{proxyHost, proxyPort, proxyScheme}
 import spray.can.Http
 import spray.http.HttpHeaders.Host
+import spray.http.StatusCodes.Redirection
 import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.RequestBuilding._
 import spray.routing.{Directives, RequestContext}
@@ -37,7 +38,7 @@ trait ProxyDirective extends Directives {
     (IO(Http) ? request)
       .mapTo[HttpResponse]
       .flatMap { response =>
-        val isRedirect = response.status.intValue / 100 == 3
+        val isRedirect = response.status.isInstanceOf[Redirection]
         response.headers.find(followRedirect && isRedirect && _.name.toLowerCase == "location")
           .map(loc => sendReceive(Get(loc.value)))
           .getOrElse(Future.successful(response))
