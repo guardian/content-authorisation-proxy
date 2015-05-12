@@ -19,7 +19,9 @@ libraryDependencies ++= {
     "io.spray"            %%  "spray-can"     % sprayV,
     "io.spray"            %%  "spray-routing" % sprayV,
     "io.spray"            %%  "spray-client"  % sprayV,
-    "com.typesafe.akka"   %%  "akka-actor"    % akkaV)
+    "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
+    "com.typesafe.akka"   %%  "akka-slf4j"    % akkaV,
+    "ch.qos.logback"      %   "logback-classic" % "1.1.2")
 }
 
 lazy val root = (project in file("."))
