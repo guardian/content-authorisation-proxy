@@ -17,7 +17,7 @@ trait HealthCheckDirective {this: HttpService =>
           if (checkConfig.length > 0) {
             throw new RuntimeException(s"Configuration keys not found: '$checkConfig'")
           }
-          complete( """{ "status": "ok" }""")
+          complete( s"""{ "status": "ok" , "gitCommitId": "${app.BuildInfo.gitCommitId}" }""")
         }
       }
     }
