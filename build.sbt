@@ -24,10 +24,22 @@ libraryDependencies ++= {
     "ch.qos.logback"      %   "logback-classic" % "1.1.2")
 }
 
-lazy val root = (project in file("."))
-  .enablePlugins(RiffRaffArtifact)
-  .enablePlugins(SbtNativePackager)
-  .enablePlugins(JavaAppPackaging)
+lazy val root = (project in file(".")).enablePlugins(
+  BuildInfoPlugin,
+  RiffRaffArtifact,
+  SbtNativePackager,
+  JavaAppPackaging
+).settings(
+  buildInfoKeys := Seq[BuildInfoKey](
+    name,
+    BuildInfoKey.constant("gitCommitId", Option(System.getenv("BUILD_VCS_NUMBER")) getOrElse(try {
+      "git rev-parse HEAD".!!.trim
+    } catch { case e: Exception => "unknown" })),
+    BuildInfoKey.constant("buildNumber", Option(System.getenv("BUILD_NUMBER")) getOrElse "DEV"),
+    BuildInfoKey.constant("buildTime", System.currentTimeMillis)
+  ),
+  buildInfoPackage := "app"
+)
 
 mappings in Universal ++= NativePackagerHelper.contentOf("cloudformation/resources")
 
