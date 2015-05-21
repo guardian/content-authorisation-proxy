@@ -1,0 +1,14 @@
+.DS_Store
+.history
+.bundle
+.idea
+.idea_modules
+*.iml
+
+logs
+out
+project/project
+project/target
+target
+tmp
+
