@@ -1,5 +1,5 @@
 {
   "checkpoints": {
-    "BETA": { "url": "https://cas-beta.guardianapis.com/healthcheck", "overdue": "14M" }
+    "BETA": { "url": "https://cas-beta.guardianapis.com/healthcheck", "overdue": "14M", "disableSSLVerification": true }
   }
 }
