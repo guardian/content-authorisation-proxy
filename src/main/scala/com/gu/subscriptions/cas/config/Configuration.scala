@@ -13,4 +13,6 @@ object Configuration {
     (proxyUri.scheme, proxyUri.authority.host.address, proxyUri.effectivePort)
   }
 
+  val stage: String = appConfig.getString("stage")
+
 }
