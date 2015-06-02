@@ -21,7 +21,10 @@ libraryDependencies ++= {
     "io.spray"            %%  "spray-client"  % sprayV,
     "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
     "com.typesafe.akka"   %%  "akka-slf4j"    % akkaV,
-    "ch.qos.logback"      %   "logback-classic" % "1.1.2")
+    "ch.qos.logback"      %   "logback-classic" % "1.1.2",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
+    "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.9.39"
+  )
 }
 
 lazy val root = (project in file(".")).enablePlugins(
