@@ -37,16 +37,8 @@ trait ProxyDirective extends Directives {
       }
     }
 
-  def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] =
-    (IO(Http) ? request)
-      .mapTo[HttpResponse]
-      .flatMap { response =>
-        val isRedirect = response.status.isInstanceOf[Redirection]
-        response.headers.find(followRedirect && isRedirect && _.name.toLowerCase == "location")
-          .map(loc => sendReceive(Get(loc.value)))
-          .getOrElse {
-            Metrics.put(s"Request URI ${request.uri.toString()}", 1)
-            Future.successful(response)
-        }
-      }
+  def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] = {
+    Metrics.put(s"Request URI ${request.uri.toString()}", 1)
+    (IO(Http) ? request).mapTo[HttpResponse]
+  }
 }
