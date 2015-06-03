@@ -23,17 +23,19 @@ trait ProxyDirective extends Directives {
 
   import actorSystem.dispatcher
 
-  val proxyRoute = (get|post) { ctx: RequestContext =>
+  val proxyRoute =
+    (path("subs") | path("auth")) {
+      post { ctx: RequestContext =>
+        val newRequest = ctx.request.copy(
+          uri = ctx.request.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
+          headers = ctx.request.headers.map { header =>
+            if (header.name.toLowerCase == "host") Host(proxyHost)
+            else header
+          })
 
-    val newRequest = ctx.request.copy(
-      uri = ctx.request.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
-      headers = ctx.request.headers.map { header =>
-        if (header.name.toLowerCase == "host") Host(proxyHost)
-        else header
-      })
-
-    ctx.complete(sendReceive(newRequest))
-  }
+        ctx.complete(sendReceive(newRequest))
+      }
+    }
 
   def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] =
     (IO(Http) ? request)
