@@ -23,28 +23,22 @@ trait ProxyDirective extends Directives {
 
   import actorSystem.dispatcher
 
-  val proxyRoute = (get|post) { ctx: RequestContext =>
+  val proxyRoute =
+    (path("subs") | path("auth")) {
+      post { ctx: RequestContext =>
+        val newRequest = ctx.request.copy(
+          uri = ctx.request.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
+          headers = ctx.request.headers.map { header =>
+            if (header.name.toLowerCase == "host") Host(proxyHost)
+            else header
+          })
 
-    val newRequest = ctx.request.copy(
-      uri = ctx.request.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
-      headers = ctx.request.headers.map { header =>
-        if (header.name.toLowerCase == "host") Host(proxyHost)
-        else header
-      })
-
-    ctx.complete(sendReceive(newRequest))
-  }
-
-  def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] =
-    (IO(Http) ? request)
-      .mapTo[HttpResponse]
-      .flatMap { response =>
-        val isRedirect = response.status.isInstanceOf[Redirection]
-        response.headers.find(followRedirect && isRedirect && _.name.toLowerCase == "location")
-          .map(loc => sendReceive(Get(loc.value)))
-          .getOrElse {
-            Metrics.put(s"Request URI ${request.uri.toString()}", 1)
-            Future.successful(response)
-        }
+        ctx.complete(sendReceive(newRequest))
       }
+    }
+
+  def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] = {
+    Metrics.put(s"Request URI ${request.uri.toString()}", 1)
+    (IO(Http) ? request).mapTo[HttpResponse]
+  }
 }
