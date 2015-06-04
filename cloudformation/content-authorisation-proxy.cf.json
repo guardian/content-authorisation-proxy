@@ -34,7 +34,7 @@
             "PROD": {
                 "HostedZoneName": "cas-beta.guardianapis.com.",
                 "DomainName": "cas-beta.guardianapis.com.",
-                "CertificateName": "cas-beta.guardianapis.com"
+                "CertificateName": "sites.guardian.co.uk"
             }
         }
     },
@@ -171,9 +171,10 @@
             "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
             "Properties" : {
                 "Listeners" : [ {
-                    "LoadBalancerPort": "80",
+                    "LoadBalancerPort": "443",
                     "InstancePort": 9300,
-                    "Protocol": "HTTP"
+                    "Protocol": "HTTPS",
+                    "SSLCertificateId" : { "Fn::Join" : [ "", [ "arn:aws:iam::", {"Ref":"AWS::AccountId"}, ":server-certificate/", { "Fn::FindInMap": ["CollectorDomainName", {"Ref": "Stage" }, "CertificateName"]} ] ] }
                 }],
                 "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
                 "Subnets" : { "Ref" : "Subnets" },
@@ -196,7 +197,7 @@
                 "GroupDescription" : "Permit incoming HTTP access on port 80, egress to port 9300",
                 "VpcId" : { "Ref" : "VpcId" },
                 "SecurityGroupIngress" : [
-                    { "IpProtocol": "tcp", "FromPort": "80", "ToPort": "80", "CidrIp": "0.0.0.0/0"}
+                    { "IpProtocol": "tcp", "FromPort": "443", "ToPort": "443", "CidrIp": "0.0.0.0/0"}
                 ],
                 "SecurityGroupEgress" : [
                     { "IpProtocol": "tcp", "FromPort": "9300", "ToPort": "9300", "CidrIp": "0.0.0.0/0" }
