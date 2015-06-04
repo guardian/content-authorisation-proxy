@@ -8,9 +8,7 @@ import com.gu.subscriptions.cas.config.Configuration.{proxyHost, proxyPort, prox
 import com.gu.subscriptions.cas.monitoring.Metrics
 import spray.can.Http
 import spray.http.HttpHeaders.Host
-import spray.http.StatusCodes.Redirection
 import spray.http.{HttpRequest, HttpResponse}
-import spray.httpx.RequestBuilding._
 import spray.routing.{Directives, RequestContext}
 
 import scala.concurrent.Future
@@ -39,6 +37,9 @@ trait ProxyDirective extends Directives {
 
   def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] = {
     Metrics.put(s"Request URI ${request.uri.toString()}", 1)
-    (IO(Http) ? request).mapTo[HttpResponse]
+    val excludeHeaders = Set("date", "content-type", "server", "content-length")
+    (IO(Http) ? request).mapTo[HttpResponse].map { resp =>
+      resp.withHeaders(resp.headers.filterNot(header => excludeHeaders.contains(header.lowercaseName)))
+    }
   }
 }
