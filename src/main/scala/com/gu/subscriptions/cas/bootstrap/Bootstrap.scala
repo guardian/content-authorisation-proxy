@@ -10,6 +10,8 @@ import scala.concurrent.duration._
 
 object Bootstrap extends App {
 
+  SentryLogging.init()
+
   implicit val system = ActorSystem("subscriptions-cas")
 
   val service = system.actorOf(Props[CASService])

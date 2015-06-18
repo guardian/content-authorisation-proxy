@@ -88,6 +88,10 @@
 
                         "mkdir /etc/gu",
 
+                        {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-private/", { "Ref" : "Stage" }, "/cas-proxy.conf /etc/gu"]]},
+                        "chown subscriptions /etc/gu/cas-proxy.conf",
+                        "chmod 0600 /etc/gu/cas-proxy.conf",
+
                         "wget https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py",
 
                         {"Fn::Join": ["", ["sed -i",
