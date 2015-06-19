@@ -1,9 +1,7 @@
 package com.gu.subscriptions.cas.config
 
 import com.typesafe.config.ConfigFactory
-import org.slf4j.LoggerFactory
 import spray.http.Uri
-
 
 object Configuration {
   private val appConfig = ConfigFactory.load()
