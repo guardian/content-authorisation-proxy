@@ -10,24 +10,32 @@ import org.slf4j.LoggerFactory
 import app.BuildInfo
 
 object SentryLogging {
+  private val log = LoggerFactory.getLogger(getClass)
+
   def init() =
-    sentryDsn.foreach { dsn =>
-      val tags       = Map("stage" -> stage) ++ BuildInfo.toMap
-      val tagsString = tags.map { case (key, value) => s"$key:$value"}.mkString(",")
+    sentryDsn match  {
+      case Some(dsn) =>
+        log.info("Sentry DSN found, we will report errors to Sentry")
+        val tags       = Map("stage" -> stage) ++ BuildInfo.toMap
+        val tagsString = tags.map { case (key, value) => s"$key:$value"}.mkString(",")
 
-      val filter = new ThresholdFilter { setLevel("ERROR") }
-      filter.start()
+        val filter = new ThresholdFilter { setLevel("ERROR") }
+        filter.start()
 
-      val sentryAppender = new SentryAppender(RavenFactory.ravenInstance(dsn)) {
-        addFilter(filter)
-        setTags(tagsString)
-        setContext(LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext])
-      }
+        val sentryAppender = new SentryAppender(RavenFactory.ravenInstance(dsn)) {
+          addFilter(filter)
+          setTags(tagsString)
+          setContext(LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext])
+        }
 
-      sentryAppender.start()
+        sentryAppender.start()
 
-      LoggerFactory.getLogger(ROOT_LOGGER_NAME)
-        .asInstanceOf[LogbackLogger]
-        .addAppender(sentryAppender)
+        LoggerFactory.getLogger(ROOT_LOGGER_NAME)
+          .asInstanceOf[LogbackLogger]
+          .addAppender(sentryAppender)
+
+      case None =>
+        if (stage == "PROD") log.error("Setting 'sentry.dsn' is blank! The app will not be able to report errors to Sentry")
     }
+
 }

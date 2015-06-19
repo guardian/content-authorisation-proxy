@@ -6,7 +6,6 @@ import spray.http.Uri
 
 
 object Configuration {
-  private val log = LoggerFactory.getLogger(getClass)
   private val appConfig = ConfigFactory.load()
 
   val EXPECTED_FIELDS = List(
@@ -15,15 +14,7 @@ object Configuration {
 
   val stage = appConfig.getString("stage")
 
-  val sentryDsn = (stage, appConfig.hasPath("sentry.dsn")) match {
-    case ("PROD", true) =>
-      Some(appConfig.getString("sentry.dsn"))
-    case ("PROD", false) =>
-      log.warn("Setting 'sentry.dsn' is blank! The app will not be able to report errors to Sentry")
-      None
-    case _ =>
-      None
-  }
+  val sentryDsn = Option(appConfig.getString("sentry.dsn"))
 
   val proxy = appConfig.getString("proxy")
 
