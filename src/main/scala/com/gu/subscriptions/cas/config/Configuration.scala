@@ -15,15 +15,14 @@ object Configuration {
 
   val stage = appConfig.getString("stage")
 
-  val sentryDsn = (stage, appConfig.hasPath("sentry.dsn")) match {
-    case ("PROD", true) =>
+  val sentryDsn =
+    if (appConfig.hasPath("sentry.dsn")) {
+      log.info("Sentry DSN found, we will report errors to Sentry")
       Some(appConfig.getString("sentry.dsn"))
-    case ("PROD", false) =>
-      log.warn("Setting 'sentry.dsn' is blank! The app will not be able to report errors to Sentry")
+    } else {
+      if (stage == "PROD") log.error("Setting 'sentry.dsn' is blank! The app will not be able to report errors to Sentry")
       None
-    case _ =>
-      None
-  }
+    }
 
   val proxy = appConfig.getString("proxy")
 
