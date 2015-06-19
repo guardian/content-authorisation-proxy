@@ -52,6 +52,10 @@ trait CloudWatch extends LazyLogging  {
 
     cloudwatch.putMetricDataAsync(request, LoggingAsyncHandler)
   }
+
+  def put(name: String, count: Double, responseMethod: String) {
+    put(name, count, new Dimension().withName("ResponseMethod").withValue(responseMethod))
+  }
 }
 
 object CloudWatchHealth {
