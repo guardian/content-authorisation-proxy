@@ -5,8 +5,7 @@ import spray.routing._
 
 class CASService extends HttpServiceActor
   with ProxyDirective
-  with HealthCheckDirective
-  with {
+  with HealthCheckDirective {
 
   override def actorRefFactory = context
 
