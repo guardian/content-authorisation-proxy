@@ -1,8 +1,9 @@
 package com.gu.subscriptions.cas.config
 
 import com.typesafe.config.ConfigFactory
-import org.slf4j.LoggerFactory
 import spray.http.Uri
+
+import scala.util.Try
 
 
 object Configuration {
@@ -14,7 +15,7 @@ object Configuration {
 
   val stage = appConfig.getString("stage")
 
-  val sentryDsn = Option(appConfig.getString("sentry.dsn"))
+  val sentryDsn = Try(appConfig.getString("sentry.dsn"))
 
   val proxy = appConfig.getString("proxy")
 
