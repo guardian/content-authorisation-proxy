@@ -9,12 +9,16 @@ import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory
 import app.BuildInfo
 
+import scala.util.{Failure, Success}
+
 object SentryLogging {
   private val log = LoggerFactory.getLogger(getClass)
 
   def init() =
     sentryDsn match  {
-      case Some(dsn) =>
+      case Failure(ex) =>
+       log.warn("No Sentry logging configured (OK for dev)", ex)
+      case Success(dsn) =>
         log.info("Sentry DSN found, we will report errors to Sentry")
         val tags       = Map("stage" -> stage) ++ BuildInfo.toMap
         val tagsString = tags.map { case (key, value) => s"$key:$value"}.mkString(",")
@@ -34,8 +38,6 @@ object SentryLogging {
           .asInstanceOf[LogbackLogger]
           .addAppender(sentryAppender)
 
-      case None =>
-        if (stage == "PROD") log.error("Setting 'sentry.dsn' is blank! The app will not be able to report errors to Sentry")
     }
 
 }
