@@ -16,13 +16,14 @@ libraryDependencies ++= {
   val akkaV = "2.3.9"
   val sprayV = "1.3.3"
   Seq(
-    "io.spray"                   %%  "spray-can"     % sprayV,
-    "io.spray"                   %%  "spray-routing" % sprayV,
-    "io.spray"                   %%  "spray-client"  % sprayV,
-    "com.typesafe.akka"          %%  "akka-actor"    % akkaV,
-    "com.typesafe.akka"          %%  "akka-slf4j"    % akkaV,
-    "ch.qos.logback"             %   "logback-classic" % "1.1.2",
-    "net.kencochrane.raven"      %   "raven-logback"   % "6.0.0",
+    "io.spray" %% "spray-routing-shapeless2" % "1.3.3",
+    "io.spray" %% "spray-can" % sprayV,
+    "io.spray" %% "spray-routing" % sprayV,
+    "io.spray" %% "spray-client" % sprayV,
+    "com.typesafe.akka" %% "akka-actor" % akkaV,
+    "com.typesafe.akka" %% "akka-slf4j" % akkaV,
+    "ch.qos.logback" % "logback-classic" % "1.1.2",
+    "net.kencochrane.raven" % "raven-logback" % "6.0.0",
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
     "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.9.39",
     "com.gu" %% "membership-common" % "0.70"
