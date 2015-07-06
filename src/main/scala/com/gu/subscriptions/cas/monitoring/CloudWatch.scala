@@ -45,7 +45,7 @@ trait CloudWatch extends LazyLogging  {
         .withValue(count)
         .withMetricName(name)
         .withUnit("Count")
-        .withDimensions((mandatoryDimensions ++ extraDimensions): _*)
+        .withDimensions(mandatoryDimensions ++ extraDimensions: _*)
 
     val request = new PutMetricDataRequest().
       withNamespace(application).withMetricData(metric)
