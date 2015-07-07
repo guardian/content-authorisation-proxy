@@ -7,7 +7,9 @@ import scala.util.Try
 
 
 object Configuration {
-  private val appConfig = ConfigFactory.load()
+  val appName = "content-authorisation-proxy"
+
+  val appConfig = ConfigFactory.load()
 
   val EXPECTED_FIELDS = List(
     "proxy"
@@ -25,4 +27,6 @@ object Configuration {
   }
 
   val nullSettings = EXPECTED_FIELDS.filter(appConfig.getString(_) == null)
+
+  val zuoraConfig = appConfig.getConfig("touchpoint.backend.environments").getConfig(stage)
 }

@@ -6,11 +6,15 @@ import spray.routing._
 class CASService extends HttpServiceActor
   with ProxyDirective
   with HealthCheckDirective
-  with CheckSentryErrors {
+  with CheckSentryErrors
+  with EagerInitialiser
+{
 
   override def actorRefFactory = context
 
   override implicit val actorSystem = context.system
 
   override def receive = runRoute(healthCheck ~ proxyRoute ~ testSentryErrors)
+
+  start()
 }
