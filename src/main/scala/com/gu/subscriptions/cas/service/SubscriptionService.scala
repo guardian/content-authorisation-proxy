@@ -30,8 +30,6 @@ class SubscriptionService(zuoraClient: ZuoraClient) {
 object SubscriptionService extends SubscriptionService(ZuoraClient)
 
 trait ZuoraClient {
-  def queryForRatePlan(subscriptionId:String): Future[Zuora.RatePlan]
-  def queryForRatePlanCharge(subscriptionId:String): Future[Zuora.RatePlanCharge]
   def queryForSubscription(subscriptionId:String): Future[Zuora.Subscription]
 }
 
@@ -50,12 +48,6 @@ object ZuoraClient extends ZuoraApi with ZuoraClient {
   
   lazy val authTask = ScheduledTask(s"Zuora ${apiConfig.envName} auth", Authentication("", ""), 0.seconds, 30.minutes)(
     request(Login(apiConfig)))
-
-  def queryForRatePlan(subscriptionId:String): Future[Zuora.RatePlan] =
-    queryOne[RatePlan](s"SubscriptionId='$subscriptionId'")
-
-  def queryForRatePlanCharge(ratePlanId:String): Future[Zuora.RatePlanCharge] =
-    queryOne[RatePlanCharge](s"RatePlanId='$ratePlanId'")
 
   def queryForSubscription(subscriptionId:String): Future[Zuora.Subscription] =
     queryOne[Subscription](s"Name='$subscriptionId'")
