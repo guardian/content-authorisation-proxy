@@ -7,7 +7,6 @@ import com.gu.monitoring.ZuoraMetrics
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.model.SubscriptionExpiration
 import com.gu.subscriptions.cas.service.utils.ScheduledTask
-import org.joda.time.DateTime
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -23,15 +22,9 @@ class SubscriptionService(zuoraClient: ZuoraClient) {
   def extractZuoraSubscriptionId(requestJson: String): Option[String] =
     requestJson.parseJson.convertTo[SubsRequest].subscriberId.filter(_.startsWith("A-S"))
 
-  def verifySubscriptionExpiration(subscriptionId:String): Future[SubscriptionExpiration] = {
-
-    def formatDate(dt: DateTime): String = dt.toString("YYYY-MM-dd")
-
-    for {
-      subscription <- zuoraClient.queryForSubscription(subscriptionId)
-    } yield SubscriptionExpiration(expiryDate = formatDate(subscription.termEndDate))
-
-  }
+  def verifySubscriptionExpiration(subscriptionId: String): Future[SubscriptionExpiration] =
+    zuoraClient.queryForSubscription(subscriptionId)
+      .map(sub => SubscriptionExpiration(sub.termEndDate))
 }
 
 object SubscriptionService extends SubscriptionService(ZuoraClient)
