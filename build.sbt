@@ -28,7 +28,7 @@ libraryDependencies ++= {
     "net.kencochrane.raven" % "raven-logback" % "6.0.0",
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
     "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.9.39",
-    "com.gu" %% "membership-common" % "0.71-SNAPSHOT"
+    "com.gu" %% "membership-common" % "0.72"
   )
 }
 

@@ -29,14 +29,7 @@ class SubscriptionService(zuoraClient: ZuoraClient) {
 
     for {
       subscription <- zuoraClient.queryForSubscription(subscriptionId)
-      ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
-      ratePlanCharge <- zuoraClient.queryForRatePlanCharge(ratePlan.id)
-    } yield {
-      val expiryDate = ratePlanCharge.chargedThroughDate.getOrElse(subscription.contractAcceptanceDate)
-      SubscriptionExpiration("g", formatDate(expiryDate))
-
-    }
-
+    } yield SubscriptionExpiration(expiryDate = formatDate(subscription.termEndDate))
 
   }
 }
