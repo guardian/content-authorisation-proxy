@@ -1,7 +1,7 @@
 package com.gu.subscriptions.cas.service
 
 import com.gu.membership.zuora.ZuoraApiConfig
-import com.gu.membership.zuora.soap.Zuora.{Authentication, RatePlan}
+import com.gu.membership.zuora.soap.Zuora.{RatePlanCharge, Subscription, Authentication, RatePlan}
 import com.gu.membership.zuora.soap._
 import com.gu.monitoring.ZuoraMetrics
 import com.gu.subscriptions.cas.config.Configuration
@@ -10,6 +10,7 @@ import com.gu.subscriptions.cas.service.utils.ScheduledTask
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class SubscriptionService(zuoraClient: ZuoraClient) {
   import spray.json._
@@ -21,15 +22,15 @@ class SubscriptionService(zuoraClient: ZuoraClient) {
   def extractZuoraSubscriptionId(requestJson: String): Option[String] =
     requestJson.parseJson.convertTo[SubsRequest].subscriberId.filter(_.startsWith("A-S"))
 
-  def verifySubscriptionExpiration(subscriptionId:String): SubscriptionExpiration = {
-    SubscriptionExpiration("A", "B")
-  }
+  def verifySubscriptionExpiration(subscriptionId: String): Future[SubscriptionExpiration] =
+    zuoraClient.queryForSubscription(subscriptionId)
+      .map(sub => SubscriptionExpiration(sub.termEndDate))
 }
 
 object SubscriptionService extends SubscriptionService(ZuoraClient)
 
 trait ZuoraClient {
-  def retrieveRatePlan(subscriptionId:String): Future[Zuora.RatePlan]
+  def queryForSubscription(subscriptionId:String): Future[Zuora.Subscription]
 }
 
 object ZuoraClient extends ZuoraApi with ZuoraClient {
@@ -48,6 +49,7 @@ object ZuoraClient extends ZuoraApi with ZuoraClient {
   lazy val authTask = ScheduledTask(s"Zuora ${apiConfig.envName} auth", Authentication("", ""), 0.seconds, 30.minutes)(
     request(Login(apiConfig)))
 
-  def retrieveRatePlan(subscriptionId:String): Future[Zuora.RatePlan] =
-    queryOne[RatePlan](s"SubscriptionId='$subscriptionId'")
+  def queryForSubscription(subscriptionId:String): Future[Zuora.Subscription] =
+    queryOne[Subscription](s"Name='$subscriptionId'")
+
 }

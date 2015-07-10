@@ -28,12 +28,14 @@ trait ProxyDirective extends Directives {
       }
     })
 
-  val subsRoute: Route = path("subs") (post {
-      respondWithMediaType(`application/json`) { ctx: RequestContext =>
+  val subsRoute = path("subs") (post {
+      respondWithMediaType(`application/json`) { requestContext: RequestContext =>
+        import scala.concurrent.ExecutionContext.Implicits.global
         import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
         import spray.json._
-        extractZuoraSubscriptionId(ctx.request.entity.asString)
-          .fold(proxyRequest(ctx))(subId => ctx.complete(verifySubscriptionExpiration(subId).toJson.toString()))
+        extractZuoraSubscriptionId(requestContext.request.entity.asString)
+          .fold(proxyRequest(requestContext))(subId =>
+            requestContext.complete(verifySubscriptionExpiration(subId).map(_.toJson.toString())))
       }
     })
 

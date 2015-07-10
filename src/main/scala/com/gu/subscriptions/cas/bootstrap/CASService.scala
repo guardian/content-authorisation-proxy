@@ -7,7 +7,7 @@ class CASService extends HttpServiceActor
   with ProxyDirective
   with HealthCheckDirective
   with CheckSentryErrors
-  with EagerInitialiser
+  with ServiceInitialiser
 {
 
   override def actorRefFactory = context
@@ -16,5 +16,5 @@ class CASService extends HttpServiceActor
 
   override def receive = runRoute(healthCheck ~ proxyRoute ~ testSentryErrors)
 
-  start()
+  init()
 }
