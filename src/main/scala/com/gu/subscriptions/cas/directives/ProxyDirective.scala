@@ -8,12 +8,12 @@ import com.amazonaws.regions.{Region, Regions}
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.config.Configuration.{proxyHost, proxyPort, proxyScheme}
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
-import com.gu.subscriptions.cas.service.SubscriptionService.{extractZuoraSubscriptionId, verifySubscriptionExpiration}
+import com.gu.subscriptions.cas.service.SubscriptionService._
 import spray.can.Http
 import spray.http.HttpHeaders.Host
 import spray.http.MediaTypes._
 import spray.http.{HttpRequest, HttpResponse}
-import spray.routing.{Directives, RequestContext, Route}
+import spray.routing.{Directives, RequestContext}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -22,27 +22,7 @@ trait ProxyDirective extends Directives {
 
   implicit val actorSystem: ActorSystem
 
-  val authRoute = path("auth") (post {
-      respondWithMediaType(`application/json`) { requestContext =>
-        proxyRequest(requestContext)
-      }
-    })
-
-  val subsRoute = path("subs") (post {
-      respondWithMediaType(`application/json`) { requestContext: RequestContext =>
-        import scala.concurrent.ExecutionContext.Implicits.global
-        import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-        import spray.json._
-        extractZuoraSubscriptionId(requestContext.request.entity.asString)
-          .fold(proxyRequest(requestContext))(subId =>
-            requestContext.complete(verifySubscriptionExpiration(subId).map(_.toJson.toString())))
-      }
-    })
-
-  val proxyRoute = authRoute ~ subsRoute
-
   val proxyRequest = {
-
     implicit val timeout: Timeout = 1.seconds
     import actorSystem.dispatcher
     val metrics = new CASMetrics(Configuration.stage)
@@ -57,16 +37,38 @@ trait ProxyDirective extends Directives {
     }
 
     { ctx: RequestContext =>
-        val newRequest = ctx.request.copy(
-          uri = ctx.request.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
-          headers = ctx.request.headers.map { header =>
-            if (header.name.toLowerCase == "host") Host(proxyHost)
-            else header
-          })
+      val newRequest = ctx.request.copy(
+        uri = ctx.request.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
+        headers = ctx.request.headers.map { header =>
+          if (header.name.toLowerCase == "host") Host(proxyHost)
+          else header
+        })
 
-        ctx.complete(sendReceive(newRequest))
+      ctx.complete(sendReceive(newRequest))
     }
   }
+
+  val authRoute = path("auth") (post {
+      respondWithMediaType(`application/json`) { requestContext =>
+        proxyRequest(requestContext)
+      }
+    })
+
+  val subsRoute = path("subs") (post {
+      respondWithMediaType(`application/json`) { requestContext: RequestContext =>
+        import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
+        import spray.json._
+        import scala.concurrent.ExecutionContext.Implicits.global
+
+        val subsRequest = extractSubsRequest(requestContext.request.entity.asString)
+        extractZuoraSubscriptionId(subsRequest)
+          .fold(proxyRequest(requestContext)) { subscriptionName => requestContext.complete(
+            verifySubscriptionExpiration(subscriptionName, subsRequest.password).map(_.toJson.toString())
+          )}
+      }
+    })
+
+  val proxyRoute = authRoute ~ subsRoute
 }
 
 class CASMetrics(val stage: String) extends StatusMetrics with RequestMetrics {
