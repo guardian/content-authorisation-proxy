@@ -58,7 +58,7 @@ trait ProxyDirective extends Directives {
       respondWithMediaType(`application/json`) { requestContext: RequestContext =>
         import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
         import spray.json._
-        import scala.concurrent.ExecutionContext.Implicits.global
+        implicit val localExecutionContext = actorSystem.dispatcher
 
         val subsRequest = extractSubsRequest(requestContext.request.entity.asString)
         extractZuoraSubscriptionId(subsRequest)
