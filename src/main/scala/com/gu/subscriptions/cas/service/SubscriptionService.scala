@@ -26,6 +26,12 @@ class SubscriptionService(zuoraClient: ZuoraClient, knownProducts: List[String])
     requestJson.parseJson.convertTo[SubsRequest]
   }
 
+  val samePostcode: (String, String) => Boolean = {
+    val format: String => String = _.replaceAll("\\s+", "").toLowerCase
+
+    (postcodeA, postcodeB) => format(postcodeA) == format(postcodeB)
+  }
+
   def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[SubscriptionExpiration] =
     for {
       subscription <- zuoraClient.queryForSubscription(subscriptionName)
@@ -37,9 +43,9 @@ class SubscriptionService(zuoraClient: ZuoraClient, knownProducts: List[String])
 
       account <- zuoraClient.queryForAccount(subscription.accountId)
       contact <- zuoraClient.queryForContact(account.billToId)
-        if contact.postalCode == postcode
-
-    } yield SubscriptionExpiration(subscription.termEndDate)}
+        if samePostcode(contact.postalCode, postcode)
+    }
+      yield SubscriptionExpiration(subscription.termEndDate)}
 
 object SubscriptionService extends SubscriptionService(ZuoraClient, Configuration.knownProducts)
 
