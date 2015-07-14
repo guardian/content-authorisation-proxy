@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class SubscriptionService(zuoraClient: ZuoraClient) {
+class SubscriptionService(zuoraClient: ZuoraClient, knownProducts: List[String]) {
   import spray.json._
   import DefaultJsonProtocol._
 
@@ -26,8 +26,6 @@ class SubscriptionService(zuoraClient: ZuoraClient) {
     requestJson.parseJson.convertTo[SubsRequest]
   }
 
-  val productId = "2c92c0f84b786da2014b91d3629b4298"
-
   def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[SubscriptionExpiration] =
     for {
       subscription <- zuoraClient.queryForSubscription(subscriptionName)
@@ -35,21 +33,15 @@ class SubscriptionService(zuoraClient: ZuoraClient) {
       ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
       productRatePlan <- zuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
       product <- zuoraClient.queryForProduct(productRatePlan.productId)
-        if product.name == "Digital Pack"
+        if knownProducts.contains(product.name)
 
       account <- zuoraClient.queryForAccount(subscription.accountId)
       contact <- zuoraClient.queryForContact(account.billToId)
         if contact.postalCode == postcode
 
-    } yield {
-      println(productRatePlan)
-      println(product)
-      println(contact)
-      SubscriptionExpiration(subscription.termEndDate)
-    }
-}
+    } yield SubscriptionExpiration(subscription.termEndDate)}
 
-object SubscriptionService extends SubscriptionService(ZuoraClient)
+object SubscriptionService extends SubscriptionService(ZuoraClient, Configuration.knownProducts)
 
 trait ZuoraClient {
   def queryForSubscription(subscriptionId:String): Future[Zuora.Subscription]

@@ -2,6 +2,7 @@ package com.gu.subscriptions.cas.config
 
 import com.typesafe.config.ConfigFactory
 import spray.http.Uri
+import  scala.collection.JavaConversions._
 
 import scala.util.Try
 
@@ -29,4 +30,6 @@ object Configuration {
   val nullSettings = EXPECTED_FIELDS.filter(appConfig.getString(_) == null)
 
   val zuoraConfig = appConfig.getConfig("touchpoint.backend.environments").getConfig(stage)
+
+  val knownProducts = appConfig.getStringList("knownProducs").toList
 }
