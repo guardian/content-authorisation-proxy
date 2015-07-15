@@ -33,19 +33,24 @@ class SubscriptionService(zuoraClient: ZuoraClient, knownProducts: List[String])
   }
 
   def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[SubscriptionExpiration] =
-    for {
-      subscription <- zuoraClient.queryForSubscription(subscriptionName)
+    zuoraClient.queryForSubscription(subscriptionName).flatMap { subscription=>
+      val knownProductCheck = for {
+        ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
+        productRatePlan <- zuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
+        product <- zuoraClient.queryForProduct(productRatePlan.productId)
+      } yield knownProducts.contains(product.name)
 
-      ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
-      productRatePlan <- zuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
-      product <- zuoraClient.queryForProduct(productRatePlan.productId)
-        if knownProducts.contains(product.name)
+      val postcodeCheck = for {
+        account <- zuoraClient.queryForAccount(subscription.accountId)
+        contact <- zuoraClient.queryForContact(account.billToId)
+      } yield samePostcode(contact.postalCode, postcode)
 
-      account <- zuoraClient.queryForAccount(subscription.accountId)
-      contact <- zuoraClient.queryForContact(account.billToId)
-        if samePostcode(contact.postalCode, postcode)
+      for {
+        productsMatch <- knownProductCheck if productsMatch
+        postcodesMatch <- postcodeCheck if postcodesMatch
+      } yield SubscriptionExpiration(subscription.termEndDate)
     }
-      yield SubscriptionExpiration(subscription.termEndDate)}
+}
 
 object SubscriptionService extends SubscriptionService(ZuoraClient, Configuration.knownProducts)
 
