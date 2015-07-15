@@ -1,18 +1,22 @@
 package com.gu.subscriptions.cas.service
 
+import com.amazonaws.regions.{Regions, Region}
 import com.gu.membership.zuora.ZuoraApiConfig
 import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
-import com.gu.monitoring.ZuoraMetrics
+import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.model.SubscriptionExpiration
 import com.gu.subscriptions.cas.service.utils.ScheduledTask
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class SubscriptionService(zuoraClient: ZuoraClient, knownProducts: List[String]) {
+class SubscriptionService(zuoraClient: ZuoraClient,
+                          knownProducts: List[String],
+                          cloudWatch: CloudWatch) extends LazyLogging {
   import spray.json._
   import DefaultJsonProtocol._
 
@@ -43,7 +47,12 @@ class SubscriptionService(zuoraClient: ZuoraClient, knownProducts: List[String])
       val postcodeCheck = for {
         account <- zuoraClient.queryForAccount(subscription.accountId)
         contact <- zuoraClient.queryForContact(account.billToId)
-      } yield samePostcode(contact.postalCode, postcode)
+      } yield {
+          val postcodesMatch = samePostcode(contact.postalCode, postcode)
+          cloudWatch.put("Postcodes not matching", 1)
+          logger.info(s"Postcodes not matching: ${contact.postalCode}, $postcode")
+          postcodesMatch
+        }
 
       for {
         productsMatch <- knownProductCheck if productsMatch
@@ -52,7 +61,12 @@ class SubscriptionService(zuoraClient: ZuoraClient, knownProducts: List[String])
     }
 }
 
-object SubscriptionService extends SubscriptionService(ZuoraClient, Configuration.knownProducts)
+object SubscriptionService extends SubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {
+  override val region: Region = Region.getRegion(Regions.EU_WEST_1)
+  override val application: String = Configuration.appName
+  override val service: String = "SubscriptionService"
+  override val stage: String = Configuration.stage
+})
 
 trait ZuoraClient {
   def queryForSubscription(subscriptionId:String): Future[Zuora.Subscription]
