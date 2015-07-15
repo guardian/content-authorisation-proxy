@@ -1,6 +1,11 @@
 package com.gu.subscriptions.cas.service
 
+import java.util.concurrent.{Callable, FutureTask}
+
+import com.amazonaws.regions.{AwsFakes, Region}
+import com.amazonaws.services.cloudwatch.model.Dimension
 import com.gu.membership.zuora.soap.Zuora._
+import com.gu.monitoring.CloudWatch
 import org.scalatest.{Matchers, FlatSpec}
 
 import scala.concurrent.Future
@@ -9,19 +14,21 @@ class SubscriptionServiceTest extends FlatSpec with Matchers {
 
   private val zuoraClient = new ZuoraClient {
     override def queryForAccount(id: String): Future[Account] = ???
-
     override def queryForProduct(id: String): Future[Product] = ???
-
     override def queryForRatePlan(subscriptionId: String): Future[RatePlan] = ???
-
     override def queryForProductRatePlan(id: String): Future[ProductRatePlan] = ???
-
     override def queryForContact(id: String): Future[Contact] = ???
-
     override def queryForSubscription(subscriptionId: String): Future[Subscription] = ???
   }
 
-  val subscriptionService = new SubscriptionService(zuoraClient, List())
+  private val cloudWatch = new CloudWatch {
+    override val application: String = "test"
+    override val region: Region = AwsFakes.FakeRegion
+    override val service: String = "test"
+    override val stage: String = "test"
+  }
+
+  val subscriptionService = new SubscriptionService(zuoraClient, List(), cloudWatch)
 
   behavior of "samePostcode"
 
