@@ -51,7 +51,7 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
 object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {
   override val region: Region = Region.getRegion(Regions.EU_WEST_1)
   override val application: String = Configuration.appName
-  override val service: String = "SubscriptionService"
+  override val service: String = "ZuoraSubscriptionService"
   override val stage: String = Configuration.stage
 })
 
