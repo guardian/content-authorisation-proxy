@@ -5,7 +5,7 @@ import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionReque
 import com.gu.subscriptions.cas.service.SubscriptionService
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
-import spray.http.HttpHeaders.RawHeader
+import spray.http.HttpHeaders._
 import spray.http._
 import spray.http.MediaTypes.`application/json`
 import spray.json._
@@ -87,7 +87,7 @@ class ProxyDirectiveSpec extends FreeSpec
     "proxyRequest" - {
       val req = HttpRequest(
         uri = Uri("http://www.example.com/endpoint"),
-        headers = List(RawHeader("Host", "www.example.com"), fooHeader)
+        headers = List(Host("www.example.com"), fooHeader)
       )
 
       "updates the URI with proxy info" in {
@@ -96,9 +96,9 @@ class ProxyDirectiveSpec extends FreeSpec
 
       "updates the host header with the proxy host" in {
         assertResult(
-          List(RawHeader("Host", proxyHost), fooHeader).map(_.toString())
+          List(Host(proxyHost), fooHeader)
         )(
-          proxyRequest(req).headers.map(_.toString())
+          proxyRequest(req).headers
         )
       }
     }
@@ -106,10 +106,10 @@ class ProxyDirectiveSpec extends FreeSpec
     "filterHeaders" - {
       "filters some headers out of the proxy response" in {
         val resp = HttpResponse(headers = List(
-          RawHeader("Date", "date"),
-          RawHeader("Content-Type", "content-type"),
-          RawHeader("Server", "server"),
-          RawHeader("Content-Length", "length"),
+          Date(spray.http.DateTime.now),
+          `Content-Type`(`application/json`),
+          Server("Nginx"),
+          `Content-Length`(1024L),
           fooHeader
         ))
 

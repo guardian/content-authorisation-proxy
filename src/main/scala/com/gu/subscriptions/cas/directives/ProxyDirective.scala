@@ -12,7 +12,7 @@ import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
 import com.gu.subscriptions.cas.service.{SubscriptionService, ZuoraSubscriptionService}
 import spray.can.Http
-import spray.http.HttpHeaders.Host
+import spray.http.HttpHeaders._
 import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.ResponseTransformation._
 import spray.httpx.SprayJsonSupport._
@@ -33,9 +33,9 @@ trait ProxyDirective extends Directives with ErrorRoute {
   def proxyRequest(in: HttpRequest): HttpRequest =
     in.copy(
       uri = in.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
-      headers = in.headers.map { header =>
-        if (header.name.toLowerCase == "host") Host(proxyHost)
-        else header
+      headers = in.headers.map {
+        case Host(_, _) => Host(proxyHost)
+        case header => header
       }
     )
 
@@ -44,10 +44,11 @@ trait ProxyDirective extends Directives with ErrorRoute {
     resp
   }
 
-  val filterHeaders: HttpResponse => HttpResponse = { resp =>
-    val excludeHeaders = Set("date", "content-type", "server", "content-length")
-    resp.withHeaders(resp.headers.filterNot(header => excludeHeaders.contains(header.lowercaseName)))
-  }
+  val filterHeaders: HttpResponse => HttpResponse = resp =>
+    resp.withHeaders(resp.headers.filter {
+      case Date(_) | `Content-Type`(_) | Server(_) | `Content-Length`(_) => false
+      case _ => true
+    })
 
   lazy val casRoute: Route = {
     implicit val timeout: Timeout = 1.seconds
