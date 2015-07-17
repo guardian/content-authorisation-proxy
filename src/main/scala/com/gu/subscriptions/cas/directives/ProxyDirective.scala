@@ -6,7 +6,6 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.amazonaws.regions.{Region, Regions}
 import com.gu.subscriptions.cas.config.Configuration
-import com.gu.subscriptions.cas.config.Configuration.{proxyHost, proxyPort, proxyScheme}
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.SubscriptionRequest
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
@@ -15,8 +14,9 @@ import com.gu.subscriptions.cas.service.{SubscriptionService, ZuoraSubscriptionS
 import spray.can.Http
 import spray.http.HttpHeaders.Host
 import spray.http.{HttpRequest, HttpResponse}
+import spray.httpx.ResponseTransformation._
 import spray.httpx.SprayJsonSupport._
-import spray.routing.{Directives, RequestContext, Route}
+import spray.routing.{Directives, Route}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -26,29 +26,39 @@ trait ProxyDirective extends Directives with ErrorRoute {
   implicit val actorSystem: ActorSystem
   lazy val subscriptionService: SubscriptionService = ZuoraSubscriptionService
 
-  lazy val casRoute = {
+  lazy val proxyHost = Configuration.proxyHost
+  lazy val proxyPort = Configuration.proxyPort
+  lazy val proxyScheme = Configuration.proxyScheme
+
+  def proxyRequest(in: HttpRequest): HttpRequest =
+    in.copy(
+      uri = in.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
+      headers = in.headers.map { header =>
+        if (header.name.toLowerCase == "host") Host(proxyHost)
+        else header
+      }
+    )
+
+  def logProxyResp(metrics: CASMetrics): HttpResponse => HttpResponse = { resp =>
+    metrics.putResponseCode(resp.status.intValue, "POST")
+    resp
+  }
+
+  val filterHeaders: HttpResponse => HttpResponse = { resp =>
+    val excludeHeaders = Set("date", "content-type", "server", "content-length")
+    resp.withHeaders(resp.headers.filterNot(header => excludeHeaders.contains(header.lowercaseName)))
+  }
+
+  lazy val casRoute: Route = {
     implicit val timeout: Timeout = 1.seconds
     val metrics = new CASMetrics(Configuration.stage)
 
     def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] = {
       metrics.putRequest
-      val excludeHeaders = Set("date", "content-type", "server", "content-length")
-      (IO(Http) ? request).mapTo[HttpResponse].map { resp =>
-        metrics.putResponseCode(resp.status.intValue, "POST")
-        resp.withHeaders(resp.headers.filterNot(header => excludeHeaders.contains(header.lowercaseName)))
-      }
+      (IO(Http) ? request).mapTo[HttpResponse].map(logProxyResp(metrics) ~> filterHeaders)
     }
 
-    { ctx: RequestContext =>
-      val newRequest = ctx.request.copy(
-        uri = ctx.request.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
-        headers = ctx.request.headers.map { header =>
-          if (header.name.toLowerCase == "host") Host(proxyHost)
-          else header
-        })
-
-      ctx.complete(sendReceive(newRequest))
-    }
+    ctx => complete(sendReceive(proxyRequest(ctx.request)))
   }
 
   val authRoute: Route = (path("auth") & post)(casRoute)
