@@ -5,8 +5,7 @@ import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionReque
 import com.gu.subscriptions.cas.service.SubscriptionService
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
-import spray.http.HttpHeaders._
-import spray.http._
+import spray.http.HttpEntity
 import spray.http.MediaTypes.`application/json`
 import spray.json._
 import spray.routing.{HttpService, Route}
@@ -28,9 +27,6 @@ class ProxyDirectiveSpec extends FreeSpec
   val expiration = SubscriptionExpiration(DateTime.now())
 
   override lazy val casRoute: Route = complete(handledByCAS)
-  override lazy val proxyHost = "www.example-proxy.com"
-  override lazy val proxyPort = 443
-  override lazy val proxyScheme = "https"
 
   override lazy val subscriptionService = new SubscriptionService {
     override def verifySubscriptionExpiration(subscriptionName: String, postcode: String) =
@@ -77,43 +73,6 @@ class ProxyDirectiveSpec extends FreeSpec
         Post("/subs", req) ~> inJson(subsRoute) ~> check {
           assertResult(BadRequest)(status)
         }
-      }
-    }
-  }
-
-  "proxying to CAS" - {
-    val fooHeader = RawHeader("foo", "bar")
-
-    "proxyRequest" - {
-      val req = HttpRequest(
-        uri = Uri("http://www.example.com/endpoint"),
-        headers = List(Host("www.example.com"), fooHeader)
-      )
-
-      "updates the URI with proxy info" in {
-        assertResult(Uri("https://www.example-proxy.com:443/endpoint"))(proxyRequest(req).uri)
-      }
-
-      "updates the host header with the proxy host" in {
-        assertResult(
-          List(Host(proxyHost), fooHeader)
-        )(
-          proxyRequest(req).headers
-        )
-      }
-    }
-
-    "filterHeaders" - {
-      "filters some headers out of the proxy response" in {
-        val resp = HttpResponse(headers = List(
-          Date(spray.http.DateTime.now),
-          `Content-Type`(`application/json`),
-          Server("Nginx"),
-          `Content-Length`(1024L),
-          fooHeader
-        ))
-
-        assertResult(List(fooHeader))(filterHeaders(resp).headers)
       }
     }
   }
