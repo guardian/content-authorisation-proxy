@@ -1,6 +1,6 @@
 package com.gu.subscriptions.cas.model.json
 
-import com.gu.subscriptions.cas.model.SubscriptionExpiration
+import com.gu.subscriptions.cas.model.{SubscriptionRequest, SubscriptionExpiration}
 import spray.json._
 
 object ModelJsonProtocol extends DefaultJsonProtocol {
@@ -13,4 +13,6 @@ object ModelJsonProtocol extends DefaultJsonProtocol {
 
     override def read(json: JsValue): SubscriptionExpiration = ??? // not needed
   }
+
+  implicit val subsRequestFormat = jsonFormat2(SubscriptionRequest)
 }

@@ -1,7 +1,6 @@
 package com.gu.subscriptions.cas.service
 
-import com.amazonaws.regions.{Regions, Region}
-import com.gu.membership.zuora.ZuoraApiConfig
+import com.amazonaws.regions.{Region, Regions}
 import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
 import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
@@ -14,21 +13,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class SubscriptionService(zuoraClient: ZuoraClient,
+class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
                           knownProducts: List[String],
-                          cloudWatch: CloudWatch) extends LazyLogging {
-  import spray.json._
-  import DefaultJsonProtocol._
-
-  case class SubsRequest(subscriberId: Option[String], password:String)
-  implicit val subsRequestFormat = jsonFormat2(SubsRequest)
-
-  def extractZuoraSubscriptionId(subsRequest: SubsRequest): Option[String] =
-    subsRequest.subscriberId.filter(_.startsWith("A-S"))
-
-  def extractSubsRequest(requestJson: String): SubsRequest = {
-    requestJson.parseJson.convertTo[SubsRequest]
-  }
+                          cloudWatch: CloudWatch) extends LazyLogging with SubscriptionService {
 
   val samePostcode: (String, String) => Boolean = {
     val format: String => String = _.replaceAll("\\s+", "").toLowerCase
@@ -36,7 +23,7 @@ class SubscriptionService(zuoraClient: ZuoraClient,
     (postcodeA, postcodeB) => format(postcodeA) == format(postcodeB)
   }
 
-  def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[SubscriptionExpiration] =
+  override def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[SubscriptionExpiration] =
     zuoraClient.queryForSubscription(subscriptionName).flatMap { subscription=>
       val knownProductCheck = for {
         ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
@@ -61,10 +48,10 @@ class SubscriptionService(zuoraClient: ZuoraClient,
     }
 }
 
-object SubscriptionService extends SubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {
+object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {
   override val region: Region = Region.getRegion(Regions.EU_WEST_1)
   override val application: String = Configuration.appName
-  override val service: String = "SubscriptionService"
+  override val service: String = "ZuoraSubscriptionService"
   override val stage: String = Configuration.stage
 })
 
@@ -78,6 +65,7 @@ trait ZuoraClient {
 }
 
 object ZuoraClient extends ZuoraApi with ZuoraClient {
+  import com.gu.membership.zuora.ZuoraApiConfig
 
   import ZuoraDeserializer._
 

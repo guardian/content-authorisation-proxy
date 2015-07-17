@@ -10,7 +10,7 @@ import org.scalatest.{Matchers, FlatSpec}
 
 import scala.concurrent.Future
 
-class SubscriptionServiceTest extends FlatSpec with Matchers {
+class ZuoraSubscriptionServiceTest extends FlatSpec with Matchers {
 
   private val zuoraClient = new ZuoraClient {
     override def queryForAccount(id: String): Future[Account] = ???
@@ -28,7 +28,7 @@ class SubscriptionServiceTest extends FlatSpec with Matchers {
     override val stage: String = "test"
   }
 
-  val subscriptionService = new SubscriptionService(zuoraClient, List(), cloudWatch)
+  val subscriptionService = new ZuoraSubscriptionService(zuoraClient, List(), cloudWatch)
 
   behavior of "samePostcode"
 

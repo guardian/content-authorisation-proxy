@@ -7,24 +7,27 @@ import akka.util.Timeout
 import com.amazonaws.regions.{Region, Regions}
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.config.Configuration.{proxyHost, proxyPort, proxyScheme}
+import com.gu.subscriptions.cas.directives.ZuoraDirective._
+import com.gu.subscriptions.cas.model.SubscriptionRequest
+import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
-import com.gu.subscriptions.cas.service.SubscriptionService._
+import com.gu.subscriptions.cas.service.{SubscriptionService, ZuoraSubscriptionService}
 import spray.can.Http
 import spray.http.HttpHeaders.Host
-import spray.http.MediaTypes._
 import spray.http.{HttpRequest, HttpResponse}
-import spray.routing.{Directives, RequestContext}
+import spray.httpx.SprayJsonSupport._
+import spray.routing.{Directives, RequestContext, Route}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-trait ProxyDirective extends Directives {
-
+trait ProxyDirective extends Directives with ErrorRoute {
   implicit val actorSystem: ActorSystem
+  lazy val subscriptionService: SubscriptionService = ZuoraSubscriptionService
 
-  val proxyRequest = {
+  lazy val casRoute = {
     implicit val timeout: Timeout = 1.seconds
-    import actorSystem.dispatcher
     val metrics = new CASMetrics(Configuration.stage)
 
     def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] = {
@@ -48,27 +51,18 @@ trait ProxyDirective extends Directives {
     }
   }
 
-  val authRoute = path("auth") (post {
-      respondWithMediaType(`application/json`) { requestContext =>
-        proxyRequest(requestContext)
-      }
-    })
+  val authRoute: Route = (path("auth") & post)(casRoute)
 
-  val subsRoute = path("subs") (post {
-      respondWithMediaType(`application/json`) { requestContext: RequestContext =>
-        import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-        import spray.json._
-        implicit val localExecutionContext = actorSystem.dispatcher
+  def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { subscriptionName =>
+    val expiration = subscriptionService.verifySubscriptionExpiration(subscriptionName, subsReq.password)
+    complete(expiration)
+  }
 
-        val subsRequest = extractSubsRequest(requestContext.request.entity.asString)
-        extractZuoraSubscriptionId(subsRequest)
-          .fold(proxyRequest(requestContext)) { subscriptionName => requestContext.complete(
-            verifySubscriptionExpiration(subscriptionName, subsRequest.password).map(_.toJson.toString())
-          )}
-      }
-    })
-
-  val proxyRoute = authRoute ~ subsRoute
+  val subsRoute = (path("subs") & post) {
+    entity(as[SubscriptionRequest]) { subsReq =>
+      zuoraRoute(subsReq) ~ casRoute
+    } ~ badRequest
+  }
 }
 
 class CASMetrics(val stage: String) extends StatusMetrics with RequestMetrics {
