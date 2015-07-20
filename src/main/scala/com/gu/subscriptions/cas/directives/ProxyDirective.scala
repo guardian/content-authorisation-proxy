@@ -6,6 +6,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.amazonaws.regions.{Region, Regions}
 import com.gu.subscriptions.cas.config.Configuration
+import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.SubscriptionRequest
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
@@ -56,7 +57,11 @@ trait ProxyDirective extends Directives with ErrorRoute {
 
     def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] = {
       metrics.putRequest
-      (IO(Http) ? request).mapTo[HttpResponse].map(logProxyResp(metrics) ~> filterHeaders)
+      (IO(Http) ? request).mapTo[HttpResponse].map(
+        logProxyResp(metrics) ~>
+        filterHeaders         ~>
+        changeResponseCode
+      )
     }
 
     ctx => ctx.complete(sendReceive(proxyRequest(ctx.request)))
