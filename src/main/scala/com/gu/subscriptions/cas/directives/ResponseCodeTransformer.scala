@@ -6,7 +6,7 @@ import spray.http.HttpResponse
 import spray.http.StatusCodes._
 import spray.json._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object ResponseCodeTransformer {
   /**

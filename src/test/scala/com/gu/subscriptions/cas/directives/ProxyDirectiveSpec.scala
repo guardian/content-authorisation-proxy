@@ -28,7 +28,7 @@ class ProxyDirectiveSpec extends FreeSpec
   val expiration = SubscriptionExpiration(DateTime.now())
 
   override lazy val casRoute: Route = complete(handledByCAS)
-  override lazy val proxyHost = "www.example-proxy.com"
+  override lazy val proxyHost = "example-proxy"
   override lazy val proxyPort = 443
   override lazy val proxyScheme = "https"
 
@@ -86,12 +86,12 @@ class ProxyDirectiveSpec extends FreeSpec
 
     "proxyRequest" - {
       val req = HttpRequest(
-        uri = Uri("http://www.example.com/endpoint"),
+        uri = Uri("http://example/endpoint"),
         headers = List(Host("www.example.com"), fooHeader)
       )
 
       "updates the URI with proxy info" in {
-        assertResult(Uri("https://www.example-proxy.com:443/endpoint"))(proxyRequest(req).uri)
+        assertResult(Uri("https://example-proxy:443/endpoint"))(proxyRequest(req).uri)
       }
 
       "updates the host header with the proxy host" in {
