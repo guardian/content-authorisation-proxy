@@ -7,7 +7,7 @@ import ModelJsonProtocol._
 
 class CASErrorExpirationProtocolSpec extends FreeSpec {
   "For CASError" - {
-    val error = CASError("message", -1)
+    val error = CASErrorWrapper(CASError("message", -1))
     val json =
       """
         |{ "error": { "message": "message", "code": -1 } }
@@ -18,7 +18,7 @@ class CASErrorExpirationProtocolSpec extends FreeSpec {
     }
 
     "handles deserialization" in {
-      assertResult(error)(json.parseJson.convertTo[CASError])
+      assertResult(error)(json.parseJson.convertTo[CASErrorWrapper])
     }
   }
 }

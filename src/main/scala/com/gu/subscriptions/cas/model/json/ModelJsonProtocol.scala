@@ -15,27 +15,8 @@ object ModelJsonProtocol extends DefaultJsonProtocol {
 
   implicit val subsRequestFormat = jsonFormat2(SubscriptionRequest)
 
-  case class CASErrorInternal(message: String, code: Int)
+  case class CASErrorWrapper(error: CASError)
 
-  implicit val casErrorFormat = jsonFormat2(CASErrorInternal)
-
-  implicit object CASErrorProtocol extends RootJsonFormat[CASError] {
-    override def write(error: CASError): JsValue = JsObject(
-      "error" -> CASErrorInternal(error.message, error.code).toJson
-    )
-
-    //In the CASError definition, deserialization code uses play.json
-    override def read(json: JsValue): CASError = json match {
-      case JsObject(map) =>
-        map.get("error") match {
-          case Some(obj) =>
-            val error = obj.convertTo[CASErrorInternal]
-            CASError(error.message, error.code)
-          case None =>
-            deserializationError("Expected an error field")
-        }
-
-      case _ => deserializationError("Expected a json object")
-    }
-  }
+  implicit val casErrorFormat = jsonFormat2(CASError)
+  implicit val casErrorWrapperFormat = jsonFormat1(CASErrorWrapper)
 }

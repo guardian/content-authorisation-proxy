@@ -12,7 +12,7 @@ import spray.http.{HttpEntity, HttpResponse}
 class ResponseCodeTransformerSpec extends FreeSpec {
   "The response code is changed" - {
     def response(code: Int): HttpResponse = {
-      val error = CASError("error message", code)
+      val error = CASErrorWrapper(CASError("error message", code))
       HttpResponse(entity = HttpEntity(`application/json`, error.toJson.toString()))
     }
 

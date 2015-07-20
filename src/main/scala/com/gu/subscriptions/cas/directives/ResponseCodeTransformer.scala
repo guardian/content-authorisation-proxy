@@ -31,13 +31,12 @@ object ResponseCodeTransformer {
 
   val changeResponseCode: HttpResponse => HttpResponse = resp =>
     Try {
-      resp.entity.asString.parseJson.convertTo[CASError]
-    } match {
+      resp.entity.asString.parseJson.convertTo[CASErrorWrapper]
+    }.map(_.error).map {
       // Caveat: A malformed json payload send to the /auth endpoint will result in an HTML 404 response by
       // the CAS server so won't be caught in the pattern match below.
-      case Success(CASError(_, BadRequestCode(_))) => resp.copy(status = BadRequest)
-      case Success(CASError(_, UnauthorizedCode(_))) => resp.copy(status = Unauthorized)
-      case Success(_) => resp.copy(status = InternalServerError)
-      case Failure(_) => resp
-    }
+      case CASError(_, BadRequestCode(_)) => resp.copy(status = BadRequest)
+      case CASError(_, UnauthorizedCode(_)) => resp.copy(status = Unauthorized)
+      case _ => resp.copy(status = InternalServerError)
+    }.getOrElse(resp)
 }
