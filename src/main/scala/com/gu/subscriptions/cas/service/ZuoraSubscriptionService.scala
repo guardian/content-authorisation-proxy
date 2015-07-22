@@ -47,17 +47,17 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
    * @return Some(Subscription) if the lookup was successful, None if the query
    *         an empty result set.
    */
-  override def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[Option[SubscriptionExpiration]] =
-    (for {
+  override def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[Option[SubscriptionExpiration]] = {
+    for {
       subscription <- zuoraClient.queryForSubscription(subscriptionName)
       productsMatch <- knownProductCheck(subscription)
       postcodesMatch <- postcodeCheck(subscription, postcode)
-    } yield {
-      if (productsMatch && postcodesMatch)
-        Some(SubscriptionExpiration(subscription.termEndDate))
-      else
-        None
-    }) recover { case e: ZuoraQueryException => None }
+    } yield
+        if (productsMatch && postcodesMatch)
+          Some(SubscriptionExpiration(subscription.termEndDate))
+        else
+          None
+    } recover { case e: ZuoraQueryException => None }
 }
 
 object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {
