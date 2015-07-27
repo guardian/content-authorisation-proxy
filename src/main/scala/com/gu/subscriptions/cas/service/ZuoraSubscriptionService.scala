@@ -23,29 +23,41 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
     (postcodeA, postcodeB) => format(postcodeA) == format(postcodeB)
   }
 
-  override def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[SubscriptionExpiration] =
-    zuoraClient.queryForSubscription(subscriptionName).flatMap { subscription=>
-      val knownProductCheck = for {
-        ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
-        productRatePlan <- zuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
-        product <- zuoraClient.queryForProduct(productRatePlan.productId)
-      } yield knownProducts.contains(product.name)
+  private def knownProductCheck(subscription: Subscription): Future[Boolean] =
+    for {
+      ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
+      productRatePlan <- zuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
+      product <- zuoraClient.queryForProduct(productRatePlan.productId)
+    } yield knownProducts.contains(product.name)
 
-      val postcodeCheck = for {
-        account <- zuoraClient.queryForAccount(subscription.accountId)
-        contact <- zuoraClient.queryForContact(account.billToId)
-      } yield {
-          val postcodesMatch = samePostcode(contact.postalCode, postcode)
-          cloudWatch.put("Postcodes not matching", 1)
-          logger.info(s"Postcodes not matching: ${contact.postalCode}, $postcode")
-          postcodesMatch
-        }
-
-      for {
-        productsMatch <- knownProductCheck if productsMatch
-        postcodesMatch <- postcodeCheck if postcodesMatch
-      } yield SubscriptionExpiration(subscription.termEndDate)
+  private def postcodeCheck(subscription: Subscription, postcode: String): Future[Boolean] =
+    for {
+      account <- zuoraClient.queryForAccount(subscription.accountId)
+      contact <- zuoraClient.queryForContact(account.billToId)
+    } yield {
+      val postcodesMatch = samePostcode(contact.postalCode, postcode)
+      if (!postcodesMatch) {
+        cloudWatch.put("Postcodes not matching", 1)
+        logger.info(s"Postcodes not matching: ${contact.postalCode}, $postcode")
+      }
+      postcodesMatch
     }
+
+  /**
+   * @return Some(Subscription) if the lookup was successful, None if the query
+   *         an empty result set.
+   */
+  override def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[Option[SubscriptionExpiration]] = {
+    for {
+      subscription <- zuoraClient.queryForSubscription(subscriptionName)
+      productsMatch <- knownProductCheck(subscription)
+      postcodesMatch <- postcodeCheck(subscription, postcode)
+    } yield
+        if (productsMatch && postcodesMatch)
+          Some(SubscriptionExpiration(subscription.termEndDate))
+        else
+          None
+    } recover { case e: ZuoraQueryException => None }
 }
 
 object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {

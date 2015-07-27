@@ -18,6 +18,7 @@ import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.ResponseTransformation._
 import spray.httpx.SprayJsonSupport._
 import spray.routing.{Directives, Route}
+import spray.http.StatusCodes
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -70,8 +71,12 @@ trait ProxyDirective extends Directives with ErrorRoute {
   val authRoute: Route = (path("auth") & post)(casRoute)
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { subscriptionName =>
-    val expiration = subscriptionService.verifySubscriptionExpiration(subscriptionName, subsReq.password)
-    complete(expiration)
+    val subscription = subscriptionService.verifySubscriptionExpiration(subscriptionName, subsReq.password)
+
+    onSuccess(subscription) {
+      case Some(expiration) => complete(expiration)
+      case _ => notFound
+    }
   }
 
   val subsRoute = (path("subs") & post) {

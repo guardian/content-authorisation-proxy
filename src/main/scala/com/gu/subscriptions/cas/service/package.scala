@@ -6,6 +6,6 @@ import scala.concurrent.Future
 
 package object service {
   trait SubscriptionService {
-    def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[SubscriptionExpiration]
+    def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[Option[SubscriptionExpiration]]
   }
 }

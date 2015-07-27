@@ -34,7 +34,7 @@ class ProxyDirectiveSpec extends FreeSpec
 
   override lazy val subscriptionService = new SubscriptionService {
     override def verifySubscriptionExpiration(subscriptionName: String, postcode: String) =
-      Future { expiration }
+      Future { Some(expiration) }
   }
 
   def inJson(r: Route): Route = respondWithMediaType(`application/json`) { r }
