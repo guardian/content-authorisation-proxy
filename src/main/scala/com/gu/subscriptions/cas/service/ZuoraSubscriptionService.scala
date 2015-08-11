@@ -1,6 +1,7 @@
 package com.gu.subscriptions.cas.service
 
 import com.amazonaws.regions.{Region, Regions}
+import com.gu.membership.util.Timing
 import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
 import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
@@ -96,9 +97,11 @@ object ZuoraClient extends ZuoraApi with ZuoraClient {
     request(Login(apiConfig)))
 
   def queryForSubscription(subscriptionName: String): Future[Zuora.Subscription] =
-    query[Zuora.Subscription](s"Name='$subscriptionName'")
-      .map(_.sortWith(_.version > _.version).headOption
+    Timing.record(metrics, "queryForSubscription") {
+      query[Zuora.Subscription](s"Name='$subscriptionName'")
+        .map(_.sortWith(_.version > _.version).headOption
         .getOrElse(throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")))
+    }
 
   def queryForProduct(id: String): Future[Zuora.Product] =
     queryOne[Zuora.Product](s"Id='$id'")
