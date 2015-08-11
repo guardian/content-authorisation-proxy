@@ -94,7 +94,7 @@ object ZuoraClient extends ZuoraApi with ZuoraClient {
     request(Login(apiConfig)))
 
   def queryForSubscription(subscriptionId: String): Future[Zuora.Subscription] =
-    queryOne[Zuora.Subscription](s"Name='$subscriptionId'")
+    query[Zuora.Subscription](s"Name='$subscriptionId'").map(_.sortWith(_.version > _.version).head)
 
   def queryForProduct(id: String): Future[Zuora.Product] =
     queryOne[Zuora.Product](s"Id='$id'")
