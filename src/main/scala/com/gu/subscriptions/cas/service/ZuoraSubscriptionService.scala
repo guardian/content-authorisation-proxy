@@ -1,6 +1,7 @@
 package com.gu.subscriptions.cas.service
 
 import com.amazonaws.regions.{Region, Regions}
+import com.gu.membership.util.Timing
 import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
 import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
@@ -52,12 +53,14 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
       subscription <- zuoraClient.queryForSubscription(subscriptionName)
       productsMatch <- knownProductCheck(subscription)
       postcodesMatch <- postcodeCheck(subscription, postcode)
-    } yield
-        if (productsMatch && postcodesMatch)
-          Some(SubscriptionExpiration(subscription.termEndDate))
-        else
-          None
-    } recover { case e: ZuoraQueryException => None }
+    } yield 
+        Some(SubscriptionExpiration(subscription.termEndDate))
+          .filter(_ => productsMatch && postcodesMatch)
+    } recover {
+      case e: ZuoraQueryException =>
+        logger.warn("Subscription verification failed", e)
+        None
+    }
 }
 
 object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {
@@ -93,8 +96,12 @@ object ZuoraClient extends ZuoraApi with ZuoraClient {
   lazy val authTask = ScheduledTask(s"Zuora ${apiConfig.envName} auth", Authentication("", ""), 0.seconds, 30.minutes)(
     request(Login(apiConfig)))
 
-  def queryForSubscription(subscriptionId: String): Future[Zuora.Subscription] =
-    queryOne[Zuora.Subscription](s"Name='$subscriptionId'")
+  def queryForSubscription(subscriptionName: String): Future[Zuora.Subscription] =
+    Timing.record(metrics, "queryForSubscription") {
+      query[Zuora.Subscription](s"Name='$subscriptionName'")
+        .map(_.sortWith(_.version > _.version).headOption
+        .getOrElse(throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")))
+    }
 
   def queryForProduct(id: String): Future[Zuora.Product] =
     queryOne[Zuora.Product](s"Id='$id'")
