@@ -9,7 +9,8 @@ object ModelJsonProtocol extends DefaultJsonProtocol {
     override def write(sub: SubscriptionExpiration): JsValue = JsObject(
       "expiry" -> JsObject(
         "expiryType" -> JsString(sub.expiryType),
-        "expiryDate" -> JsString(sub.expiryDate.toString("YYYY-MM-dd"))
+        "expiryDate" -> JsString(sub.expiryDate.toString("YYYY-MM-dd")),
+        "content" -> JsString(sub.content)
     ))
   }
 
