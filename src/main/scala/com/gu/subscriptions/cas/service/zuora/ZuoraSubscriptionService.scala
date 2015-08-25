@@ -6,14 +6,13 @@ import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
 import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
 import com.gu.subscriptions.cas.config.Configuration
-import com.gu.subscriptions.cas.model.SubscriptionExpiration
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Success, Failure}
+import scala.util.{Failure, Success}
 
 class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
                           knownProducts: List[String],
@@ -49,18 +48,11 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
    * @return Some(Subscription) if the lookup was successful, None if the query
    *         an empty result set.
    */
-  override def verifySubscriptionExpiration(subscription: Subscription, postcode: String): Future[Option[SubscriptionExpiration]] = {
+  override def checkSubscriptionValidity(subscription: Subscription, postcode: String): Future[Boolean] =
     for {
       productsMatch <- knownProductCheck(subscription)
       postcodesMatch <- postcodeCheck(subscription, postcode)
-    } yield 
-        Some(SubscriptionExpiration(subscription.termEndDate))
-          .filter(_ => productsMatch && postcodesMatch)
-    } recover {
-      case e: ZuoraQueryException =>
-        logger.warn("Subscription verification failed", e)
-        None
-    }
+    } yield productsMatch && postcodesMatch
 
   override def updateActivationDate(subscription: Subscription): Unit = {
     val name = subscription.name

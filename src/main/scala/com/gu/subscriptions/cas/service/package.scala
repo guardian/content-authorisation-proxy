@@ -9,7 +9,7 @@ package object service {
   trait SubscriptionService {
     def updateActivationDate(subscription: Subscription): Unit
 
-    def verifySubscriptionExpiration(subscription: Subscription, postcode: String): Future[Option[SubscriptionExpiration]]
+    def checkSubscriptionValidity(subscription: Subscription, postcode: String): Future[Boolean]
 
     def getSubscription(name: String): Future[Option[Subscription]]
   }

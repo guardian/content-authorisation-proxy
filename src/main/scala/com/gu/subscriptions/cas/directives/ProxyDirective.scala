@@ -8,7 +8,7 @@ import com.amazonaws.regions.{Region, Regions}
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
-import com.gu.subscriptions.cas.model.SubscriptionRequest
+import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
 import com.gu.subscriptions.cas.service.SubscriptionService
@@ -71,20 +71,17 @@ trait ProxyDirective extends Directives with ErrorRoute {
   val authRoute: Route = (path("auth") & post)(casRoute)
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { subscriptionName =>
-    val subscriptionAndExpiration = for {
+    val validSubscription = for {
       subscription <- ZuoraSubscriptionService.getSubscription(subscriptionName)
-      expiration <- subscription match {
-        case None =>
-          Future { None }
-        case Some(subs) =>
-          subscriptionService.verifySubscriptionExpiration(subs, subsReq.password)
+      isValid <- subscription.fold(Future { false }) { subs =>
+        ZuoraSubscriptionService.checkSubscriptionValidity(subs, subsReq.password)
       }
-    } yield (subscription, expiration)
+    } yield subscription.filter(_ => isValid)
 
-    onSuccess(subscriptionAndExpiration) {
-      case (Some(subscription), Some(expiration)) =>
+    onSuccess(validSubscription) {
+      case Some(subscription) =>
         subscriptionService.updateActivationDate(subscription)
-        complete(expiration)
+        complete(SubscriptionExpiration(subscription.termEndDate))
       case _ =>
         notFound
     }
