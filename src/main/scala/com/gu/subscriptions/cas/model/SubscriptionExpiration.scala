@@ -1,4 +1,4 @@
 package com.gu.subscriptions.cas.model
 import org.joda.time.DateTime
 
-case class SubscriptionExpiration(expiryDate: DateTime, expiryType: String = "sub")
+case class SubscriptionExpiration(expiryDate: DateTime, expiryType: String = "sub", content: String = "SevenDay")
