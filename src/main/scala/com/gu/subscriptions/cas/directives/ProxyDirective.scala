@@ -11,14 +11,14 @@ import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.SubscriptionRequest
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
-import com.gu.subscriptions.cas.service.{SubscriptionService, ZuoraSubscriptionService}
+import com.gu.subscriptions.cas.service.SubscriptionService
+import com.gu.subscriptions.cas.service.zuora.ZuoraSubscriptionService
 import spray.can.Http
 import spray.http.HttpHeaders._
 import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.ResponseTransformation._
 import spray.httpx.SprayJsonSupport._
 import spray.routing.{Directives, Route}
-import spray.http.StatusCodes
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

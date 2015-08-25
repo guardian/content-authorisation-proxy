@@ -1,4 +1,4 @@
-package com.gu.subscriptions.cas.service
+package com.gu.subscriptions.cas.service.zuora
 
 import com.amazonaws.regions.{Region, Regions}
 import com.gu.membership.util.Timing
@@ -7,6 +7,7 @@ import com.gu.membership.zuora.soap._
 import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.model.SubscriptionExpiration
+import com.gu.subscriptions.cas.service.SubscriptionService
 import com.gu.subscriptions.cas.service.utils.ScheduledTask
 import com.typesafe.scalalogging.LazyLogging
 
@@ -80,9 +81,8 @@ trait ZuoraClient {
 }
 
 object ZuoraClient extends ZuoraApi with ZuoraClient {
-  import com.gu.membership.zuora.ZuoraApiConfig
-
   import ZuoraDeserializer._
+  import com.gu.membership.zuora.ZuoraApiConfig
 
   override val apiConfig: ZuoraApiConfig = ZuoraApiConfig.from(Configuration.zuoraConfig, Configuration.stage)
 
@@ -118,4 +118,7 @@ object ZuoraClient extends ZuoraApi with ZuoraClient {
   def queryForContact(id: String): Future[Zuora.Contact] =
     queryOne[Zuora.Contact](s"Id='$id'")
 
+  def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult] = {
+    request[UpdateResult](Update(subscriptionId, "Subscription", fields))
+  }
 }

@@ -6,6 +6,7 @@ import com.amazonaws.regions.{AwsFakes, Region}
 import com.amazonaws.services.cloudwatch.model.Dimension
 import com.gu.membership.zuora.soap.Zuora._
 import com.gu.monitoring.CloudWatch
+import com.gu.subscriptions.cas.service.zuora.{ZuoraSubscriptionService, ZuoraClient, ZuoraSubscriptionService$$}
 import org.scalatest.{Matchers, FlatSpec}
 
 import scala.concurrent.Future
