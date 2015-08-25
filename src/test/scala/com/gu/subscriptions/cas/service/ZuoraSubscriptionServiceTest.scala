@@ -20,6 +20,8 @@ class ZuoraSubscriptionServiceTest extends FlatSpec with Matchers {
     override def queryForProductRatePlan(id: String): Future[ProductRatePlan] = ???
     override def queryForContact(id: String): Future[Contact] = ???
     override def queryForSubscription(subscriptionId: String): Future[Subscription] = ???
+    override def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Subscription]] = ???
+    override def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult] = ???
   }
 
   private val cloudWatch = new CloudWatch {

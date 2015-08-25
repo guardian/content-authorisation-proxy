@@ -1,5 +1,6 @@
 package com.gu.subscriptions.cas.directives
 
+import com.gu.membership.zuora.soap.Zuora.Subscription
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.SubscriptionService
@@ -25,7 +26,19 @@ class ProxyDirectiveSpec extends FreeSpec
   override implicit val actorSystem = system
 
   val handledByCAS = "Handled by CAS"
-  val expiration = SubscriptionExpiration(DateTime.now())
+  val now = DateTime.now()
+  val termEndDate = now.plusYears(1)
+  val subscription = Subscription(
+    id = "123",
+    name = "A-S123",
+    accountId = "123",
+    version = 1,
+    termStartDate = now,
+    termEndDate = termEndDate,
+    contractAcceptanceDate = now,
+    activationDate = None
+  )
+  val expiration = SubscriptionExpiration(termEndDate)
 
   override lazy val casRoute: Route = complete(handledByCAS)
   override lazy val proxyHost = "example-proxy"
@@ -33,8 +46,12 @@ class ProxyDirectiveSpec extends FreeSpec
   override lazy val proxyScheme = "https"
 
   override lazy val subscriptionService = new SubscriptionService {
-    override def verifySubscriptionExpiration(subscriptionName: String, postcode: String) =
-      Future { Some(expiration) }
+    override def checkSubscriptionValidity(subscription: Subscription, postcode: String) =
+      Future { true }
+
+    override def updateActivationDate(subscription: Subscription): Unit = ()
+
+    override def getSubscription(name: String): Future[Option[Subscription]] = Future { Some(subscription) }
   }
 
   def inJson(r: Route): Route = respondWithMediaType(`application/json`) { r }

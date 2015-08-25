@@ -72,9 +72,9 @@ trait ProxyDirective extends Directives with ErrorRoute {
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { subscriptionName =>
     val validSubscription = for {
-      subscription <- ZuoraSubscriptionService.getSubscription(subscriptionName)
+      subscription <- subscriptionService.getSubscription(subscriptionName)
       isValid <- subscription.fold(Future { false }) { subs =>
-        ZuoraSubscriptionService.checkSubscriptionValidity(subs, subsReq.password)
+        subscriptionService.checkSubscriptionValidity(subs, subsReq.password)
       }
     } yield subscription.filter(_ => isValid)
 

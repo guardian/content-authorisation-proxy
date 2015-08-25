@@ -1,7 +1,6 @@
 package com.gu.subscriptions.cas
 
 import com.gu.membership.zuora.soap.Zuora.Subscription
-import com.gu.subscriptions.cas.model.SubscriptionExpiration
 
 import scala.concurrent.Future
 
