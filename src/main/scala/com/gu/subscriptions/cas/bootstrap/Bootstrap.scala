@@ -1,18 +1,17 @@
 package com.gu.subscriptions.cas.bootstrap
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.Props
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import spray.can.Http
 
 import scala.concurrent.duration._
+import com.gu.subscriptions.cas.config.Configuration.system
 
 object Bootstrap extends App {
 
   SentryLogging.init()
-
-  implicit val system = ActorSystem("subscriptions-cas")
 
   val service = system.actorOf(Props[CASService])
 

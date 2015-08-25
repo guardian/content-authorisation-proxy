@@ -8,12 +8,10 @@ import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.model.SubscriptionExpiration
 import com.gu.subscriptions.cas.service.SubscriptionService
-import com.gu.subscriptions.cas.service.utils.ScheduledTask
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
                           knownProducts: List[String],
@@ -80,45 +78,39 @@ trait ZuoraClient {
   def queryForProduct(id: String): Future[Zuora.Product]
 }
 
-object ZuoraClient extends ZuoraApi with ZuoraClient {
+object ZuoraClient extends ZuoraClient {
   import ZuoraDeserializer._
   import com.gu.membership.zuora.ZuoraApiConfig
 
-  override val apiConfig: ZuoraApiConfig = ZuoraApiConfig.from(Configuration.zuoraConfig, Configuration.stage)
-
-  override implicit def authentication: Authentication = authTask.get()
-
-  override val application: String = Configuration.appName
-  override val stage: String = Configuration.stage
-
-  override val metrics = new ZuoraMetrics(stage, application)
-
-  lazy val authTask = ScheduledTask(s"Zuora ${apiConfig.envName} auth", Authentication("", ""), 0.seconds, 30.minutes)(
-    request(Login(apiConfig)))
+  private val application: String = Configuration.appName
+  private val stage: String = Configuration.stage
+  val apiConfig: ZuoraApiConfig = ZuoraApiConfig.from(Configuration.zuoraConfig, Configuration.stage)
+  val metrics = new ZuoraMetrics(stage, application)
+  val api = new ZuoraApi(apiConfig, metrics, Configuration.system)
 
   def queryForSubscription(subscriptionName: String): Future[Zuora.Subscription] =
     Timing.record(metrics, "queryForSubscription") {
-      query[Zuora.Subscription](s"Name='$subscriptionName'")
+      api.query[Zuora.Subscription](s"Name='$subscriptionName'")
         .map(_.sortWith(_.version > _.version).headOption
         .getOrElse(throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")))
     }
 
   def queryForProduct(id: String): Future[Zuora.Product] =
-    queryOne[Zuora.Product](s"Id='$id'")
+    api.queryOne[Zuora.Product](s"Id='$id'")
 
   def queryForRatePlan(subscriptionId: String): Future[Zuora.RatePlan] =
-    queryOne[Zuora.RatePlan](s"SubscriptionId='$subscriptionId'")
+    api.queryOne[Zuora.RatePlan](s"SubscriptionId='$subscriptionId'")
 
   def queryForProductRatePlan(id: String): Future[Zuora.ProductRatePlan] =
-    queryOne[Zuora.ProductRatePlan](s"Id='$id'")
+    api.queryOne[Zuora.ProductRatePlan](s"Id='$id'")
 
   def queryForAccount(id: String): Future[Zuora.Account] =
-    queryOne[Zuora.Account](s"Id='$id'")
+    api.queryOne[Zuora.Account](s"Id='$id'")
 
   def queryForContact(id: String): Future[Zuora.Contact] =
-    queryOne[Zuora.Contact](s"Id='$id'")
+    api.queryOne[Zuora.Contact](s"Id='$id'")
 
   def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult] = {
-    request[UpdateResult](Update(subscriptionId, "Subscription", fields))
+    api.authenticatedRequest[UpdateResult](Update(subscriptionId, "Subscription", fields))
   }
 }
