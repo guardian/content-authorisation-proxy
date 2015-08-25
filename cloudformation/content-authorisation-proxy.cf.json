@@ -32,8 +32,8 @@
     "Mappings": {
         "CollectorDomainName": {
             "PROD": {
-                "HostedZoneName": "cas-beta.guardianapis.com.",
-                "DomainName": "cas-beta.guardianapis.com.",
+                "HostedZoneName": "subscriptions.guardianapis.com.",
+                "DomainName": "cas-proxy.subscriptions.guardianapis.com.",
                 "CertificateName": "sites.guardian.co.uk"
             }
         }
@@ -226,11 +226,9 @@
                 "HostedZoneName" : { "Fn::FindInMap": ["CollectorDomainName", {"Ref": "Stage" }, "HostedZoneName"]},
                 "Comment" : "CNAME for AWS ELB",
                 "Name" :  { "Fn::FindInMap": ["CollectorDomainName", {"Ref": "Stage" }, "DomainName"]},
-                "Type" : "A",
-                "AliasTarget" : {
-                    "HostedZoneId" : { "Fn::GetAtt" : ["CASProxyElasticLoadBalancer", "CanonicalHostedZoneNameID"] },
-                    "DNSName" : { "Fn::GetAtt" : ["CASProxyElasticLoadBalancer", "CanonicalHostedZoneName"] }
-                }
+                "Type" : "CNAME",
+                "TTL" : "120",
+                "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
             }
         }
     },
