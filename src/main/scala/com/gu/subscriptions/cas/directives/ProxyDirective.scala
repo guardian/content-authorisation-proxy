@@ -71,11 +71,22 @@ trait ProxyDirective extends Directives with ErrorRoute {
   val authRoute: Route = (path("auth") & post)(casRoute)
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { subscriptionName =>
-    val subscription = subscriptionService.verifySubscriptionExpiration(subscriptionName, subsReq.password)
+    val subscriptionAndExpiration = for {
+      subscription <- ZuoraSubscriptionService.getSubscription(subscriptionName)
+      expiration <- subscription match {
+        case None =>
+          Future { None }
+        case Some(subs) =>
+          subscriptionService.verifySubscriptionExpiration(subs, subsReq.password)
+      }
+    } yield (subscription, expiration)
 
-    onSuccess(subscription) {
-      case Some(expiration) => complete(expiration)
-      case _ => notFound
+    onSuccess(subscriptionAndExpiration) {
+      case (Some(subscription), Some(expiration)) =>
+        subscriptionService.updateActivationDate(subscription)
+        complete(expiration)
+      case _ =>
+        notFound
     }
   }
 

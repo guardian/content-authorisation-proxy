@@ -9,9 +9,11 @@ import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.model.SubscriptionExpiration
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.{Success, Failure}
 
 class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
                           knownProducts: List[String],
@@ -47,9 +49,8 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
    * @return Some(Subscription) if the lookup was successful, None if the query
    *         an empty result set.
    */
-  override def verifySubscriptionExpiration(subscriptionName: String, postcode: String): Future[Option[SubscriptionExpiration]] = {
+  override def verifySubscriptionExpiration(subscription: Subscription, postcode: String): Future[Option[SubscriptionExpiration]] = {
     for {
-      subscription <- zuoraClient.queryForSubscription(subscriptionName)
       productsMatch <- knownProductCheck(subscription)
       postcodesMatch <- postcodeCheck(subscription, postcode)
     } yield 
@@ -60,6 +61,20 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
         logger.warn("Subscription verification failed", e)
         None
     }
+
+  override def updateActivationDate(subscription: Subscription): Unit = {
+    val name = subscription.name
+    if (subscription.activationDate.isEmpty) {
+      zuoraClient.updateSubscription(subscription.id, "ActivationDate__c" -> DateTime.now().toString) onComplete {
+        case Success(_) => logger.debug(s"Updated activation date for subscription $name")
+        case Failure(e) => logger.error(s"Error while trying to update activation date for subscription: $name", e)
+      }
+    } else {
+      logger.debug(s"Activation date already present (${subscription.activationDate.get}}) in subscription $name")
+    }
+  }
+
+  override def getSubscription(name: String): Future[Option[Subscription]] = zuoraClient.queryForSubscriptionOpt(name)
 }
 
 object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {
@@ -70,12 +85,14 @@ object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Co
 })
 
 trait ZuoraClient {
-  def queryForSubscription(subscriptionId:String): Future[Zuora.Subscription]
-  def queryForRatePlan(subscriptionId: String): Future[Zuora.RatePlan]
-  def queryForProductRatePlan(id: String): Future[Zuora.ProductRatePlan]
-  def queryForAccount(id: String): Future[Zuora.Account]
-  def queryForContact(id: String): Future[Zuora.Contact]
-  def queryForProduct(id: String): Future[Zuora.Product]
+  def queryForSubscription(subscriptionName: String): Future[Subscription]
+  def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Subscription]]
+  def queryForRatePlan(subscriptionId: String): Future[RatePlan]
+  def queryForProductRatePlan(id: String): Future[ProductRatePlan]
+  def queryForAccount(id: String): Future[Account]
+  def queryForContact(id: String): Future[Contact]
+  def queryForProduct(id: String): Future[Product]
+  def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult]
 }
 
 object ZuoraClient extends ZuoraClient {
@@ -89,10 +106,14 @@ object ZuoraClient extends ZuoraClient {
   val api = new ZuoraApi(apiConfig, metrics, Configuration.system)
 
   def queryForSubscription(subscriptionName: String): Future[Zuora.Subscription] =
+    queryForSubscriptionOpt(subscriptionName).map(_.getOrElse(
+      throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")
+    ))
+
+  def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Zuora.Subscription]] =
     Timing.record(metrics, "queryForSubscription") {
       api.query[Zuora.Subscription](s"Name='$subscriptionName'")
-        .map(_.sortWith(_.version > _.version).headOption
-        .getOrElse(throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")))
+        .map(_.sortWith(_.version > _.version).headOption)
     }
 
   def queryForProduct(id: String): Future[Zuora.Product] =
