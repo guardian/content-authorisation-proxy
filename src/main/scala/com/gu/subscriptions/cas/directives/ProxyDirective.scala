@@ -8,8 +8,8 @@ import com.amazonaws.regions.{Region, Regions}
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
-import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
+import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.gu.subscriptions.cas.service.zuora.ZuoraSubscriptionService
@@ -60,8 +60,8 @@ trait ProxyDirective extends Directives with ErrorRoute {
       metrics.putRequest
       (IO(Http) ? request).mapTo[HttpResponse].map(
         logProxyResp(metrics) ~>
-        filterHeaders         ~>
-        changeResponseCode
+          filterHeaders ~>
+          changeResponseCode
       )
     }
 
@@ -71,20 +71,27 @@ trait ProxyDirective extends Directives with ErrorRoute {
   val authRoute: Route = (path("auth") & post)(casRoute)
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { subscriptionName =>
-    val validSubscription = for {
-      subscription <- subscriptionService.getSubscription(subscriptionName)
-      isValid <- subscription.fold(Future { false }) { subs =>
-        subscriptionService.checkSubscriptionValidity(subs, subsReq.password)
-      }
-    } yield subscription.filter(_ => isValid)
 
-    onSuccess(validSubscription) {
+    val validSubscriptions = getValidSubscriptions(subsReq, subscriptionName)
+
+    onSuccess(validSubscriptions) {
       case Some(subscription) =>
         subscriptionService.updateActivationDate(subscription)
         complete(SubscriptionExpiration(subscription.termEndDate))
       case _ =>
         notFound
     }
+  }
+
+  def getValidSubscriptions(subsReq: SubscriptionRequest, subscriptionName: String) = {
+    for {
+      subscription <- subscriptionService.getSubscription(subscriptionName)
+      isValid <- subscription.fold(Future {
+        false
+      }) { subs =>
+        subscriptionService.checkSubscriptionValidity(subs, subsReq.password)
+      }
+    } yield subscription.filter(_ => isValid)
   }
 
   val subsRoute = (path("subs") & post) {

@@ -17,18 +17,25 @@ import spray.http.StatusCodes.BadRequest
 import scala.concurrent.Future
 
 class ProxyDirectiveSpec extends FreeSpec
-                         with ScalatestRouteTest
-                         with ProxyDirective
-                         with HttpService {
+with ScalatestRouteTest
+with ProxyDirective
+with HttpService {
 
   def actorRefFactory = system
 
   override implicit val actorSystem = system
 
   val handledByCAS = "Handled by CAS"
+  override lazy val casRoute: Route = complete(handledByCAS)
+  override lazy val proxyHost = "example-proxy"
+  override lazy val proxyPort = 443
+  override lazy val proxyScheme = "https"
+
   val now = DateTime.now()
   val termEndDate = now.plusYears(1)
-  val subscription = Subscription(
+  val expiration = SubscriptionExpiration(termEndDate)
+
+  val validSubscription = Subscription(
     id = "123",
     name = "A-S123",
     accountId = "123",
@@ -38,20 +45,14 @@ class ProxyDirectiveSpec extends FreeSpec
     contractAcceptanceDate = now,
     activationDate = None
   )
-  val expiration = SubscriptionExpiration(termEndDate)
-
-  override lazy val casRoute: Route = complete(handledByCAS)
-  override lazy val proxyHost = "example-proxy"
-  override lazy val proxyPort = 443
-  override lazy val proxyScheme = "https"
 
   override lazy val subscriptionService = new SubscriptionService {
-    override def checkSubscriptionValidity(subscription: Subscription, postcode: String) =
-      Future { true }
+
+    override def checkSubscriptionValidity(subscription: Subscription, postcode: String) =  Future { subscription.name.startsWith("A-S") }
 
     override def updateActivationDate(subscription: Subscription): Unit = ()
 
-    override def getSubscription(name: String): Future[Option[Subscription]] = Future { Some(subscription) }
+    override def getSubscription(name: String): Future[Option[Subscription]] = Future { Some(validSubscription) }
   }
 
   def inJson(r: Route): Route = respondWithMediaType(`application/json`) { r }
@@ -115,8 +116,8 @@ class ProxyDirectiveSpec extends FreeSpec
         assertResult(
           List(Host(proxyHost), fooHeader)
         )(
-          proxyRequest(req).headers
-        )
+            proxyRequest(req).headers
+          )
       }
     }
 
