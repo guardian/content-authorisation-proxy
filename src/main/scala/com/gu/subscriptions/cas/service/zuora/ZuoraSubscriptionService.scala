@@ -15,8 +15,8 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
-                          knownProducts: List[String],
-                          cloudWatch: CloudWatch) extends LazyLogging with SubscriptionService {
+                               knownProducts: List[String],
+                               cloudWatch: CloudWatch) extends LazyLogging with SubscriptionService {
 
   val samePostcode: (String, String) => Boolean = {
     val format: String => String = _.replaceAll("\\s+", "").toLowerCase
@@ -78,16 +78,24 @@ object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Co
 
 trait ZuoraClient {
   def queryForSubscription(subscriptionName: String): Future[Subscription]
+
   def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Subscription]]
+
   def queryForRatePlan(subscriptionId: String): Future[RatePlan]
+
   def queryForProductRatePlan(id: String): Future[ProductRatePlan]
+
   def queryForAccount(id: String): Future[Account]
+
   def queryForContact(id: String): Future[Contact]
+
   def queryForProduct(id: String): Future[Product]
+
   def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult]
 }
 
 object ZuoraClient extends ZuoraClient {
+
   import ZuoraDeserializer._
   import com.gu.membership.zuora.ZuoraApiConfig
 
@@ -97,31 +105,31 @@ object ZuoraClient extends ZuoraClient {
   val metrics = new ZuoraMetrics(stage, application)
   val api = new ZuoraApi(apiConfig, metrics, Configuration.system)
 
-  def queryForSubscription(subscriptionName: String): Future[Zuora.Subscription] =
+  def queryForSubscription(subscriptionName: String): Future[Subscription] =
     queryForSubscriptionOpt(subscriptionName).map(_.getOrElse(
       throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")
     ))
 
-  def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Zuora.Subscription]] =
+  def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Subscription]] =
     Timing.record(metrics, "queryForSubscription") {
-      api.query[Zuora.Subscription](s"Name='$subscriptionName'")
+      api.query[Subscription](s"Name='$subscriptionName'")
         .map(_.sortWith(_.version > _.version).headOption)
     }
 
-  def queryForProduct(id: String): Future[Zuora.Product] =
-    api.queryOne[Zuora.Product](s"Id='$id'")
+  def queryForProduct(id: String): Future[Product] =
+    api.queryOne[Product](s"Id='$id'")
 
-  def queryForRatePlan(subscriptionId: String): Future[Zuora.RatePlan] =
-    api.queryOne[Zuora.RatePlan](s"SubscriptionId='$subscriptionId'")
+  def queryForRatePlan(subscriptionId: String): Future[RatePlan] =
+    api.queryOne[RatePlan](s"SubscriptionId='$subscriptionId'")
 
-  def queryForProductRatePlan(id: String): Future[Zuora.ProductRatePlan] =
-    api.queryOne[Zuora.ProductRatePlan](s"Id='$id'")
+  def queryForProductRatePlan(id: String): Future[ProductRatePlan] =
+    api.queryOne[ProductRatePlan](s"Id='$id'")
 
-  def queryForAccount(id: String): Future[Zuora.Account] =
-    api.queryOne[Zuora.Account](s"Id='$id'")
+  def queryForAccount(id: String): Future[Account] =
+    api.queryOne[Account](s"Id='$id'")
 
-  def queryForContact(id: String): Future[Zuora.Contact] =
-    api.queryOne[Zuora.Contact](s"Id='$id'")
+  def queryForContact(id: String): Future[Contact] =
+    api.queryOne[Contact](s"Id='$id'")
 
   def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult] = {
     api.authenticatedRequest[UpdateResult](Update(subscriptionId, "Subscription", fields))
