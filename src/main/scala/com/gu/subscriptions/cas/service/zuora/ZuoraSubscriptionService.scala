@@ -6,6 +6,7 @@ import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
 import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
 import com.gu.subscriptions.cas.config.Configuration
+import com.gu.subscriptions.cas.model.SubscriptionRequest
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
@@ -44,16 +45,6 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
       postcodesMatch
     }
 
-  /**
-   * @return Some(Subscription) if the lookup was successful, None if the query
-   *         an empty result set.
-   */
-  override def checkSubscriptionValidity(subscription: Subscription, postcode: String): Future[Boolean] =
-    for {
-      productsMatch <- knownProductCheck(subscription)
-      postcodesMatch <- postcodeCheck(subscription, postcode)
-    } yield productsMatch && postcodesMatch
-
   override def updateActivationDate(subscription: Subscription): Unit = {
     val name = subscription.name
     if (subscription.activationDate.isEmpty) {
@@ -66,7 +57,24 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
     }
   }
 
-  override def getSubscription(name: String): Future[Option[Subscription]] = zuoraClient.queryForSubscriptionOpt(name)
+  override def getValidSubscription(subscriptionName: String, password: String): Future[Option[Subscription]] = {
+
+    /**
+     * @return Some(Subscription) if the lookup was successful, None if the query an empty result set.
+     */
+    def checkSubscriptionValidity(subscription: Subscription): Future[Boolean] =
+      for {
+        productsMatch <- knownProductCheck(subscription)
+        postcodesMatch <- postcodeCheck(subscription, password)
+      } yield productsMatch && postcodesMatch
+
+    def getSubscription(): Future[Option[Subscription]] = zuoraClient.queryForSubscriptionOpt(subscriptionName)
+
+    for {
+      subscription <- getSubscription()
+      isValid <- subscription.fold(Future {false}) { subscription => checkSubscriptionValidity(subscription) }
+    } yield subscription.filter(_ => isValid)
+  }
 }
 
 object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {

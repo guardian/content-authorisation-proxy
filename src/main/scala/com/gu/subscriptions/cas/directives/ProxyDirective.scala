@@ -5,6 +5,7 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.amazonaws.regions.{Region, Regions}
+import com.gu.membership.zuora.soap.Zuora.Subscription
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
@@ -25,9 +26,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 trait ProxyDirective extends Directives with ErrorRoute {
+
   implicit val actorSystem: ActorSystem
   lazy val subscriptionService: SubscriptionService = ZuoraSubscriptionService
-
   lazy val proxyHost = Configuration.proxyHost
   lazy val proxyPort = Configuration.proxyPort
   lazy val proxyScheme = Configuration.proxyScheme
@@ -72,26 +73,15 @@ trait ProxyDirective extends Directives with ErrorRoute {
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { subscriptionName =>
 
-    val validSubscriptions = getValidSubscriptions(subsReq, subscriptionName)
+    val validSubscription = subscriptionService.getValidSubscription(subscriptionName, subsReq.password)
 
-    onSuccess(validSubscriptions) {
+    onSuccess(validSubscription) {
       case Some(subscription) =>
         subscriptionService.updateActivationDate(subscription)
         complete(SubscriptionExpiration(subscription.termEndDate))
       case _ =>
         notFound
     }
-  }
-
-  def getValidSubscriptions(subsReq: SubscriptionRequest, subscriptionName: String) = {
-    for {
-      subscription <- subscriptionService.getSubscription(subscriptionName)
-      isValid <- subscription.fold(Future {
-        false
-      }) { subs =>
-        subscriptionService.checkSubscriptionValidity(subs, subsReq.password)
-      }
-    } yield subscription.filter(_ => isValid)
   }
 
   val subsRoute = (path("subs") & post) {

@@ -1,15 +1,13 @@
 package com.gu.subscriptions.cas
 
 import com.gu.membership.zuora.soap.Zuora.Subscription
-
 import scala.concurrent.Future
 
 package object service {
   trait SubscriptionService {
+
     def updateActivationDate(subscription: Subscription): Unit
 
-    def checkSubscriptionValidity(subscription: Subscription, postcode: String): Future[Boolean]
-
-    def getSubscription(name: String): Future[Option[Subscription]]
+    def getValidSubscription(subscriptionName: String, password: String) : Future[Option[Subscription]]
   }
 }
