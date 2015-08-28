@@ -10,7 +10,6 @@ class CASService extends HttpServiceActor
   with ProxyDirective
   with HealthCheckDirective
   with CheckSentryErrors
-  with ServiceInitialiser
   with ErrorRoute
   with LazyLogging {
 
@@ -29,6 +28,4 @@ class CASService extends HttpServiceActor
       healthCheck ~ authRoute ~ subsRoute ~ notFound
     }
   )
-
-  init()
 }
