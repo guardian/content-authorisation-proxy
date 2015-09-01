@@ -9,7 +9,5 @@ package object service {
     def updateActivationDate(subscription: Subscription): Unit
 
     def getValidSubscription(subscriptionName: String, password: String) : Future[Option[Subscription]]
-
-    def isReady: Boolean
   }
 }

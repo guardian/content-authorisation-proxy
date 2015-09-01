@@ -59,8 +59,6 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
         else
           None
       }
-
-    override def isReady: Boolean = true
   }
 
   def inJson(r: Route): Route = respondWithMediaType(`application/json`) {r}
