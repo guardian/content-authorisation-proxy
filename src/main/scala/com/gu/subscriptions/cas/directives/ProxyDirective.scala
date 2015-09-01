@@ -5,7 +5,6 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.amazonaws.regions.{Region, Regions}
-import com.gu.membership.zuora.soap.Zuora.Subscription
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._

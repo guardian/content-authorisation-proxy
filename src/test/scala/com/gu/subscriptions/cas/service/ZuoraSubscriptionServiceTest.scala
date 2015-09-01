@@ -1,13 +1,10 @@
 package com.gu.subscriptions.cas.service
 
-import java.util.concurrent.{Callable, FutureTask}
-
 import com.amazonaws.regions.{AwsFakes, Region}
-import com.amazonaws.services.cloudwatch.model.Dimension
 import com.gu.membership.zuora.soap.Zuora._
 import com.gu.monitoring.CloudWatch
-import com.gu.subscriptions.cas.service.zuora.{ZuoraSubscriptionService, ZuoraClient, ZuoraSubscriptionService$$}
-import org.scalatest.{Matchers, FlatSpec}
+import com.gu.subscriptions.cas.service.zuora.{ZuoraClient, ZuoraSubscriptionService}
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.concurrent.Future
 
@@ -22,6 +19,7 @@ class ZuoraSubscriptionServiceTest extends FlatSpec with Matchers {
     override def queryForSubscription(subscriptionId: String): Future[Subscription] = ???
     override def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Subscription]] = ???
     override def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult] = ???
+    override def isReady: Boolean = true
   }
 
   private val cloudWatch = new CloudWatch {
