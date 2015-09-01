@@ -6,7 +6,6 @@ import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
 import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
 import com.gu.subscriptions.cas.config.Configuration
-import com.gu.subscriptions.cas.model.SubscriptionRequest
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
@@ -24,6 +23,8 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
 
     (postcodeA, postcodeB) => format(postcodeA) == format(postcodeB)
   }
+
+  def isReady: Boolean = zuoraClient.isReady
 
   private def knownProductCheck(subscription: Subscription): Future[Boolean] =
     for {
@@ -100,6 +101,8 @@ trait ZuoraClient {
   def queryForProduct(id: String): Future[Product]
 
   def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult]
+
+  def isReady: Boolean
 }
 
 object ZuoraClient extends ZuoraClient {
@@ -142,4 +145,6 @@ object ZuoraClient extends ZuoraClient {
   def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult] = {
     api.authenticatedRequest[UpdateResult](Update(subscriptionId, "Subscription", fields))
   }
+
+  override def isReady: Boolean = api.isReady
 }

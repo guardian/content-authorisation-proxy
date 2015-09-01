@@ -32,4 +32,12 @@ trait ErrorRoute {
         entity = errorMsg("Internal server error")
       )
     )
+
+  val serviceUnavailableError: Route =
+    complete(
+      HttpResponse(
+        status = StatusCodes.ServiceUnavailable,
+        entity = errorMsg("Service Unavailable. Please try again later")
+      )
+    )
 }
