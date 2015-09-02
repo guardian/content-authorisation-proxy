@@ -1,11 +1,11 @@
 package com.gu.subscriptions.cas.service.zuora
 
-import com.amazonaws.regions.{Region, Regions}
 import com.gu.membership.util.Timing
 import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
-import com.gu.monitoring.{CloudWatch, ZuoraMetrics}
-import com.gu.subscriptions.cas.config.Configuration
+import com.gu.subscriptions.cas.config.Configuration.knownProducts
+import com.gu.subscriptions.cas.config.Zuora._
+import com.gu.subscriptions.cas.model.Implicits.ContactOpts
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
@@ -14,42 +14,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
-                               knownProducts: List[String],
-                               cloudWatch: CloudWatch) extends LazyLogging with SubscriptionService {
-
-  val samePostcode: (String, String) => Boolean = {
-    val format: String => String = _.replaceAll("\\s+", "").toLowerCase
-
-    (postcodeA, postcodeB) => format(postcodeA) == format(postcodeB)
-  }
-
-  def isReady: Boolean = zuoraClient.isReady
-
-  private def knownProductCheck(subscription: Subscription): Future[Boolean] =
-    for {
-      ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
-      productRatePlan <- zuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
-      product <- zuoraClient.queryForProduct(productRatePlan.productId)
-    } yield knownProducts.contains(product.name)
-
-  private def postcodeCheck(subscription: Subscription, postcode: String): Future[Boolean] =
-    for {
-      account <- zuoraClient.queryForAccount(subscription.accountId)
-      contact <- zuoraClient.queryForContact(account.billToId)
-    } yield {
-      val postcodesMatch = samePostcode(contact.postalCode, postcode)
-      if (!postcodesMatch) {
-        cloudWatch.put("Postcodes not matching", 1)
-        logger.info(s"Postcodes not matching: ${contact.postalCode}, $postcode")
-      }
-      postcodesMatch
-    }
-
+object ZuoraSubscriptionService extends LazyLogging with SubscriptionService {
   override def updateActivationDate(subscription: Subscription): Unit = {
     val name = subscription.name
     if (subscription.activationDate.isEmpty) {
-      zuoraClient.updateSubscription(subscription.id, "ActivationDate__c" -> DateTime.now().toString) onComplete {
+      ZuoraClient.updateSubscriptionActivationDate(subscription.id) onComplete {
         case Success(_) => logger.debug(s"Updated activation date for subscription $name")
         case Failure(e) => logger.error(s"Error while trying to update activation date for subscription: $name", e)
       }
@@ -59,92 +28,75 @@ class ZuoraSubscriptionService(zuoraClient: ZuoraClient,
   }
 
   override def getValidSubscription(subscriptionName: String, password: String): Future[Option[Subscription]] = {
+    def checkSubscriptionValidity(subscription: Subscription): Future[Boolean] = {
+      val knownProductCheck = for {
+        ratePlan <- ZuoraClient.queryForRatePlan(subscription.id)
+        productRatePlan <- ZuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
+        product <- ZuoraClient.queryForProduct(productRatePlan.productId)
+      } yield knownProducts.contains(product.name)
 
-    /**
-     * @return Some(Subscription) if the lookup was successful, None if the query an empty result set.
-     */
-    def checkSubscriptionValidity(subscription: Subscription): Future[Boolean] =
+      val postcodeCheck =
+        for {
+          account <- ZuoraClient.queryForAccount(subscription.accountId)
+          contact <- ZuoraClient.queryForContact(account.billToId)
+        } yield {
+          val postcodesMatch = contact.samePostcode(password)
+          if (!postcodesMatch) {
+            cloudWatch.put("Postcodes not matching", 1)
+            logger.info(s"Postcodes not matching: ${contact.postalCode}, $password")
+          }
+          postcodesMatch
+        }
+
       for {
-        productsMatch <- knownProductCheck(subscription)
-        postcodesMatch <- postcodeCheck(subscription, password)
+        productsMatch <- knownProductCheck
+        postcodesMatch <- postcodeCheck
       } yield productsMatch && postcodesMatch
-
-    def getSubscription(): Future[Option[Subscription]] = zuoraClient.queryForSubscriptionOpt(subscriptionName)
-
-    for {
-      subscription <- getSubscription()
-      isValid <- subscription.fold(Future {false}) { subscription => checkSubscriptionValidity(subscription) }
-    } yield subscription.filter(_ => isValid)
-  }
-}
-
-object ZuoraSubscriptionService extends ZuoraSubscriptionService(ZuoraClient, Configuration.knownProducts, new CloudWatch {
-  override val region: Region = Region.getRegion(Regions.EU_WEST_1)
-  override val application: String = Configuration.appName
-  override val service: String = "ZuoraSubscriptionService"
-  override val stage: String = Configuration.stage
-})
-
-trait ZuoraClient {
-  def queryForSubscription(subscriptionName: String): Future[Subscription]
-
-  def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Subscription]]
-
-  def queryForRatePlan(subscriptionId: String): Future[RatePlan]
-
-  def queryForProductRatePlan(id: String): Future[ProductRatePlan]
-
-  def queryForAccount(id: String): Future[Account]
-
-  def queryForContact(id: String): Future[Contact]
-
-  def queryForProduct(id: String): Future[Product]
-
-  def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult]
-
-  def isReady: Boolean
-}
-
-object ZuoraClient extends ZuoraClient {
-
-  import ZuoraDeserializer._
-  import com.gu.membership.zuora.ZuoraApiConfig
-
-  private val application: String = Configuration.appName
-  private val stage: String = Configuration.stage
-  val apiConfig: ZuoraApiConfig = ZuoraApiConfig.from(Configuration.zuoraConfig, Configuration.stage)
-  val metrics = new ZuoraMetrics(stage, application)
-  val api = new ZuoraApi(apiConfig, metrics, Configuration.system)
-
-  def queryForSubscription(subscriptionName: String): Future[Subscription] =
-    queryForSubscriptionOpt(subscriptionName).map(_.getOrElse(
-      throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")
-    ))
-
-  def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Subscription]] =
-    Timing.record(metrics, "queryForSubscription") {
-      api.query[Subscription](s"Name='$subscriptionName'")
-        .map(_.sortWith(_.version > _.version).headOption)
     }
 
-  def queryForProduct(id: String): Future[Product] =
-    api.queryOne[Product](s"Id='$id'")
-
-  def queryForRatePlan(subscriptionId: String): Future[RatePlan] =
-    api.queryOne[RatePlan](s"SubscriptionId='$subscriptionId'")
-
-  def queryForProductRatePlan(id: String): Future[ProductRatePlan] =
-    api.queryOne[ProductRatePlan](s"Id='$id'")
-
-  def queryForAccount(id: String): Future[Account] =
-    api.queryOne[Account](s"Id='$id'")
-
-  def queryForContact(id: String): Future[Contact] =
-    api.queryOne[Contact](s"Id='$id'")
-
-  def updateSubscription(subscriptionId: String, fields: (String, String)*): Future[UpdateResult] = {
-    api.authenticatedRequest[UpdateResult](Update(subscriptionId, "Subscription", fields))
+    for {
+      subscription <- ZuoraClient.queryForSubscriptionOpt(subscriptionName)
+      isValid <- subscription.fold(Future {false})(checkSubscriptionValidity)
+    } yield subscription.filter(_ => isValid)
   }
 
-  override def isReady: Boolean = api.isReady
+  override def isReady: Boolean = ZuoraClient.isReady
+
+  private object ZuoraClient {
+    import ZuoraDeserializer._
+
+    def queryForSubscription(subscriptionName: String): Future[Subscription] =
+      queryForSubscriptionOpt(subscriptionName).map(_.getOrElse(
+        throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")
+      ))
+
+    def queryForSubscriptionOpt(subscriptionName: String): Future[Option[Subscription]] =
+      Timing.record(metrics, "queryForSubscription") {
+        api.query[Subscription](s"Name='$subscriptionName'")
+          .map(_.sortWith(_.version > _.version).headOption)
+      }
+
+    def queryForProduct(id: String): Future[Product] =
+      api.queryOne[Product](s"Id='$id'")
+
+    def queryForRatePlan(subscriptionId: String): Future[RatePlan] =
+      api.queryOne[RatePlan](s"SubscriptionId='$subscriptionId'")
+
+    def queryForProductRatePlan(id: String): Future[ProductRatePlan] =
+      api.queryOne[ProductRatePlan](s"Id='$id'")
+
+    def queryForAccount(id: String): Future[Account] =
+      api.queryOne[Account](s"Id='$id'")
+
+    def queryForContact(id: String): Future[Contact] =
+      api.queryOne[Contact](s"Id='$id'")
+
+    def updateSubscriptionActivationDate(subscriptionId: String): Future[UpdateResult] = {
+      val fields = Seq("ActivationDate__c" -> DateTime.now().toString)
+      api.authenticatedRequest[UpdateResult](Update(subscriptionId, "Subscription",  fields))
+    }
+
+    def isReady: Boolean = api.isReady
+  }
 }
+
