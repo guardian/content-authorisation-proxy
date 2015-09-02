@@ -3,7 +3,7 @@ package com.gu.subscriptions.cas.service.zuora
 import com.gu.membership.util.Timing
 import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
-import com.gu.subscriptions.cas.config.Configuration
+import com.gu.subscriptions.cas.config.Configuration.knownProducts
 import com.gu.subscriptions.cas.config.Zuora._
 import com.gu.subscriptions.cas.model.Implicits.ContactOpts
 import com.gu.subscriptions.cas.service.SubscriptionService
@@ -15,13 +15,10 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 object ZuoraSubscriptionService extends LazyLogging with SubscriptionService {
-  private val zuoraClient = ZuoraClient
-  private val knownProducts = Configuration.knownProducts
-
   override def updateActivationDate(subscription: Subscription): Unit = {
     val name = subscription.name
     if (subscription.activationDate.isEmpty) {
-      zuoraClient.updateSubscription(subscription.id, "ActivationDate__c" -> DateTime.now().toString) onComplete {
+      ZuoraClient.updateSubscription(subscription.id, "ActivationDate__c" -> DateTime.now().toString) onComplete {
         case Success(_) => logger.debug(s"Updated activation date for subscription $name")
         case Failure(e) => logger.error(s"Error while trying to update activation date for subscription: $name", e)
       }
@@ -40,7 +37,7 @@ object ZuoraSubscriptionService extends LazyLogging with SubscriptionService {
         postcodesMatch <- postcodeCheck(subscription, password)
       } yield productsMatch && postcodesMatch
 
-    def getSubscription: Future[Option[Subscription]] = zuoraClient.queryForSubscriptionOpt(subscriptionName)
+    def getSubscription: Future[Option[Subscription]] = ZuoraClient.queryForSubscriptionOpt(subscriptionName)
 
     for {
       subscription <- getSubscription
@@ -48,19 +45,19 @@ object ZuoraSubscriptionService extends LazyLogging with SubscriptionService {
     } yield subscription.filter(_ => isValid)
   }
 
-  override def isReady: Boolean = zuoraClient.isReady
+  override def isReady: Boolean = ZuoraClient.isReady
 
   private def knownProductCheck(subscription: Subscription): Future[Boolean] =
     for {
-      ratePlan <- zuoraClient.queryForRatePlan(subscription.id)
-      productRatePlan <- zuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
-      product <- zuoraClient.queryForProduct(productRatePlan.productId)
+      ratePlan <- ZuoraClient.queryForRatePlan(subscription.id)
+      productRatePlan <- ZuoraClient.queryForProductRatePlan(ratePlan.productRatePlanId)
+      product <- ZuoraClient.queryForProduct(productRatePlan.productId)
     } yield knownProducts.contains(product.name)
 
   private def postcodeCheck(subscription: Subscription, postcode: String): Future[Boolean] =
     for {
-      account <- zuoraClient.queryForAccount(subscription.accountId)
-      contact <- zuoraClient.queryForContact(account.billToId)
+      account <- ZuoraClient.queryForAccount(subscription.accountId)
+      contact <- ZuoraClient.queryForContact(account.billToId)
     } yield {
       val postcodesMatch = contact.samePostcode(postcode)
       if (!postcodesMatch) {
