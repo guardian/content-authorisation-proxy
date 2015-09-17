@@ -1,6 +1,6 @@
 package com.gu.subscriptions.cas.model
 
-import com.gu.membership.zuora.soap.Zuora.Contact
+import com.gu.membership.zuora.soap.models.Query.Contact
 import org.scalatest.{FlatSpec, Matchers}
 import Implicits.ContactOpts
 

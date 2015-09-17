@@ -1,6 +1,7 @@
 package com.gu.subscriptions.cas
 
-import com.gu.membership.zuora.soap.Zuora.Subscription
+import com.gu.membership.zuora.soap.models.Query.Subscription
+
 import scala.concurrent.Future
 
 package object service {
