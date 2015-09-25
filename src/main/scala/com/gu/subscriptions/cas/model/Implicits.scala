@@ -1,6 +1,6 @@
 package com.gu.subscriptions.cas.model
 
-import com.gu.membership.zuora.soap.models.Query.Contact
+import com.gu.membership.zuora.soap.models.Queries.Contact
 
 
 object Implicits {

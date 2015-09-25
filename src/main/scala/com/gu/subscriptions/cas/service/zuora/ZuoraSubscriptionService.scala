@@ -3,8 +3,8 @@ package com.gu.subscriptions.cas.service.zuora
 import com.gu.membership.util.Timing
 import com.gu.membership.zuora.soap._
 import com.gu.membership.zuora.soap.actions.Actions.Update
-import com.gu.membership.zuora.soap.models.Query._
-import com.gu.membership.zuora.soap.models.Result.UpdateResult
+import com.gu.membership.zuora.soap.models.Queries._
+import com.gu.membership.zuora.soap.models.Results.UpdateResult
 import com.gu.subscriptions.cas.config.Configuration.knownProducts
 import com.gu.subscriptions.cas.config.Zuora._
 import com.gu.subscriptions.cas.model.Implicits.ContactOpts
