@@ -1,6 +1,6 @@
 package com.gu.subscriptions.cas.directives
 
-import com.gu.membership.zuora.soap.Zuora.Subscription
+import com.gu.membership.zuora.soap.models.Queries.Subscription
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.SubscriptionService

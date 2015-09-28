@@ -1,8 +1,10 @@
 package com.gu.subscriptions.cas.service.zuora
 
 import com.gu.membership.util.Timing
-import com.gu.membership.zuora.soap.Zuora._
 import com.gu.membership.zuora.soap._
+import com.gu.membership.zuora.soap.actions.Actions.Update
+import com.gu.membership.zuora.soap.models.Queries._
+import com.gu.membership.zuora.soap.models.Results.UpdateResult
 import com.gu.subscriptions.cas.config.Configuration.knownProducts
 import com.gu.subscriptions.cas.config.Zuora._
 import com.gu.subscriptions.cas.model.Implicits.ContactOpts
@@ -63,7 +65,7 @@ object ZuoraSubscriptionService extends LazyLogging with SubscriptionService {
   override def isReady: Boolean = ZuoraClient.isReady
 
   private object ZuoraClient {
-    import ZuoraDeserializer._
+    import Readers._
 
     def queryForSubscription(subscriptionName: String): Future[Subscription] =
       queryForSubscriptionOpt(subscriptionName).map(_.getOrElse(
