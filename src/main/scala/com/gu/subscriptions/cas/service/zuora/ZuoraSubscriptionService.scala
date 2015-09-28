@@ -1,16 +1,18 @@
 package com.gu.subscriptions.cas.service.zuora
 
 import com.gu.membership.util.Timing
+import com.gu.membership.zuora.soap
 import com.gu.membership.zuora.soap._
 import com.gu.membership.zuora.soap.actions.Actions.Update
 import com.gu.membership.zuora.soap.models.Queries._
 import com.gu.membership.zuora.soap.models.Results.UpdateResult
-import com.gu.subscriptions.cas.config.Configuration.knownProducts
+import com.gu.subscriptions.cas.config.Configuration._
 import com.gu.subscriptions.cas.config.Zuora._
 import com.gu.subscriptions.cas.model.Implicits.ContactOpts
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
+import com.github.nscala_time.time.Imports._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -67,6 +69,9 @@ object ZuoraSubscriptionService extends LazyLogging with SubscriptionService {
   private object ZuoraClient {
     import Readers._
 
+    val api = new soap.Client(apiConfig, metrics, system)
+
+
     def queryForSubscription(subscriptionName: String): Future[Subscription] =
       queryForSubscriptionOpt(subscriptionName).map(_.getOrElse(
         throw new ZuoraQueryException(s"Subscription not found '$subscriptionName'")
@@ -98,7 +103,7 @@ object ZuoraSubscriptionService extends LazyLogging with SubscriptionService {
       api.authenticatedRequest[UpdateResult](Update(subscriptionId, "Subscription",  fields))
     }
 
-    def isReady: Boolean = api.isReady
+    def isReady: Boolean = api.lastPingTimeWithin(2.minutes)
   }
 }
 
