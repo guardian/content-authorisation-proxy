@@ -64,7 +64,7 @@
             "Properties" : {
                 "ImageId" : "ami-914924e6",
                 "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
-                "InstanceType" : "t2.micro",
+                "InstanceType" : "t2.small",
                 "KeyName" : { "Ref" : "KeyName" },
                 "IamInstanceProfile": { "Ref" : "SubscriptionsAppInstanceProfile" },
                 "AssociatePublicIpAddress": true,
