@@ -34,7 +34,7 @@
             "PROD": {
                 "HostedZoneName": "subscriptions.guardianapis.com.",
                     "DomainName": "cas-proxy.subscriptions.guardianapis.com.",
-                "CertificateName": "star.subscriptions.guardianapis.com"
+                "CertificateName": "sites.guardian.co.uk"
             }
         }
     },
