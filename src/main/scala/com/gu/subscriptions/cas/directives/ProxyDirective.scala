@@ -58,7 +58,7 @@ trait ProxyDirective extends Directives with ErrorRoute {
     val metrics = new CASMetrics(Configuration.stage)
 
     def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] = {
-      (IO(Http) ? (request, HostConnectorSetup(Configuration.proxyHost, 443, sslEncryption = true) )).mapTo[HttpResponse].map(
+      (IO(Http) ? (request, HostConnectorSetup(proxyHost, proxyPort, sslEncryption = true) )).mapTo[HttpResponse].map(
         logProxyResp(metrics) ~>
           filterHeaders ~>
           changeResponseCode
