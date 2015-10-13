@@ -24,6 +24,7 @@ libraryDependencies ++= {
     "io.spray" %% "spray-testkit" % sprayV % "test",
     "io.spray" %% "spray-json" % sprayJsonV,
     "com.typesafe.akka" %% "akka-actor" % akkaV,
+    "com.typesafe.akka" %% "akka-testkit" % akkaV,
     "com.typesafe.akka" %% "akka-slf4j" % akkaV,
     "ch.qos.logback" % "logback-classic" % "1.1.2",
     "net.kencochrane.raven" % "raven-logback" % "6.0.0",

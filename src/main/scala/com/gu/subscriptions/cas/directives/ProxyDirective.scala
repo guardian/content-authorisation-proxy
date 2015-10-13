@@ -1,6 +1,6 @@
 package com.gu.subscriptions.cas.directives
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
@@ -28,6 +28,9 @@ import scala.concurrent.duration._
 trait ProxyDirective extends Directives with ErrorRoute {
 
   implicit val actorSystem: ActorSystem
+  implicit val timeout: Timeout = 1.seconds
+
+  lazy val io: ActorRef = IO(Http)
   lazy val subscriptionService: SubscriptionService = ZuoraSubscriptionService
   lazy val proxyHost = Configuration.proxyHost
   lazy val proxyPort = Configuration.proxyPort
@@ -53,19 +56,19 @@ trait ProxyDirective extends Directives with ErrorRoute {
       case _ => true
     })
 
-  lazy val casRoute: Route = {
-    implicit val timeout: Timeout = 1.seconds
-    val metrics = new CASMetrics(Configuration.stage)
+  def hostConnectorSetup = HostConnectorSetup(proxyHost, proxyPort, sslEncryption = true)
 
-    def sendReceive(request: HttpRequest, followRedirect: Boolean = true): Future[HttpResponse] = {
-      (IO(Http) ? (request, HostConnectorSetup(proxyHost, proxyPort, sslEncryption = true) )).mapTo[HttpResponse].map(
-        logProxyResp(metrics) ~>
+  def sendReceive(request: HttpRequest, metrics: CASMetrics, followRedirect: Boolean = true): Future[HttpResponse] = {
+    (io ? (request, hostConnectorSetup)).mapTo[HttpResponse].map(
+      logProxyResp(metrics) ~>
           filterHeaders ~>
           changeResponseCode
-      )
-    }
+    )
+  }
 
-    ctx => ctx.complete(sendReceive(proxyRequest(ctx.request)))
+  lazy val casRoute: Route = {
+    val metrics = new CASMetrics(Configuration.stage)
+    ctx => ctx.complete(sendReceive(proxyRequest(ctx.request), metrics))
   }
 
   val authRoute: Route = (path("auth") & post)(casRoute)

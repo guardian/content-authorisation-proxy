@@ -1,11 +1,15 @@
 package com.gu.subscriptions.cas.directives
 
+import akka.actor.ActorRef
+import akka.testkit.{TestProbe, TestActorRef}
 import com.gu.membership.zuora.soap.models.Queries.Subscription
+import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.SubscriptionService
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
+import spray.can.Http.HostConnectorSetup
 import spray.http.HttpHeaders._
 import spray.http._
 import spray.http.MediaTypes.`application/json`
@@ -22,7 +26,13 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   override implicit val actorSystem = system
 
+
+  val testProbe = TestProbe()
+  override lazy val io = testProbe.ref
+
   val handledByCAS = "Handled by CAS"
+  val realCasRoute: Route = casRoute
+
   override lazy val casRoute: Route = complete(handledByCAS)
   override lazy val proxyHost = "example-proxy"
   override lazy val proxyPort = 443
@@ -157,4 +167,25 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
         }
       }
     }
+
+    "forwarding the HTTP request with host options" - {
+
+      val request = new HttpRequest(HttpMethods.GET, "/")
+      val msg = (request, hostConnectorSetup)
+
+      "the host connector setup should point at the proxy" - {
+        assertResult(proxyHost)(hostConnectorSetup.host)
+        assertResult(proxyPort)(hostConnectorSetup.port)
+      }
+
+      "the host connector should be using the hostname verifying SSL engine" - {
+        assertResult(HostnameVerifyingClientSSLEngineProvider.provider)(hostConnectorSetup.sslEngineProvider)
+      }
+
+      "the CAS route should call IO(Http) with the expected HostConnectorSetup" - {
+        sendReceive(request, new CASMetrics("DEV"))
+        testProbe.expectMsg(msg)
+      }
+    }
+
   }
