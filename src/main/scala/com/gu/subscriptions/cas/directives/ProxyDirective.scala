@@ -9,7 +9,7 @@ import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
+import com.gu.subscriptions.cas.model.{ResponseComparer, SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.gu.subscriptions.cas.service.zuora.ZuoraSubscriptionService
@@ -26,29 +26,40 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   implicit val actorSystem: ActorSystem
   implicit val timeout: Timeout = 2.seconds
   lazy val io: ActorRef = IO(Http)
   lazy val subscriptionService: SubscriptionService = ZuoraSubscriptionService
+  val filterHeaders: HttpResponse => HttpResponse = resp =>
+    resp.withHeaders(resp.headers.filter {
+      case Date(_) | `Content-Type`(_) | Server(_) | `Content-Length`(_) => false
+      case _ => true
+    })
 
+  def connectorFromUrl(proxyUri: Uri) = {
+    HostConnectorSetup(proxyUri.authority.host.address, proxyUri.effectivePort, sslEncryption = true)
+  }
 
-  def proxyRequest(in: HttpRequest, proxy: String): Future[HttpResponse] = {
-    val metrics = new CASMetrics(Configuration.stage)
+  def createProxyRequest(in: HttpRequest, proxyUri: Uri) = {
     val (proxyScheme, proxyHost, proxyPort, proxyPath) = {
-      val proxyUri = Uri(proxy)
       (proxyUri.scheme, proxyUri.authority.host.address, proxyUri.effectivePort, proxyUri.path)
     }
-
-    val request = in.copy(
+    in.copy(
       uri = in.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme).withPath(Uri.Path(proxyPath.toString() + in.uri.path.toString())),
       headers = in.headers.map {
         case Host(_, _) => Host(proxyHost)
         case header => header
       }
     )
-    val hostConnectorSetup = HostConnectorSetup(proxyHost, proxyPort, sslEncryption = true)
+  }
+
+  def proxyRequest(in: HttpRequest, proxy: String, metrics: CASMetrics): Future[HttpResponse] = {
+    val proxyUri = Uri(proxy)
+    val request = createProxyRequest(in, proxyUri)
+    val hostConnectorSetup = connectorFromUrl(proxyUri)
     (io ?(request, hostConnectorSetup)).mapTo[HttpResponse].map(
       logProxyResp(metrics) ~>
         filterHeaders ~>
@@ -62,45 +73,25 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     resp
   }
 
-  val filterHeaders: HttpResponse => HttpResponse = resp =>
-    resp.withHeaders(resp.headers.filter {
-      case Date(_) | `Content-Type`(_) | Server(_) | `Content-Length`(_) => false
-      case _ => true
-    })
-
-  private def compareSubscriptionRequests(request: HttpRequest, casResponse: Future[HttpResponse]): Unit = {
-    val uri: Uri = request.uri
-    val isSubsRequest = uri.path != null &&
-      uri.path.toString().contains("/subs")
-
-    def compareResponses(oldResponse: HttpResponse, newResponse: HttpResponse) {
-      val hasSameStatus = oldResponse.status == newResponse.status
-      val hasSameBody = oldResponse.entity.asString == newResponse.entity.asString
-      if (!hasSameStatus && !hasSameBody)
-        logger.error("Legacy apps returned different Responses")
-      else
-        logger.info("Legacy apps returned same Responses ")
-    }
-
-    if (isSubsRequest) {
-      for {
-        oldResponse <- casResponse
-        newResponse <- proxyRequest(request, Configuration.proxyNew)
-      } yield compareResponses(oldResponse, newResponse)
-    }
+  private def compareSubscriptionResponses(request: HttpRequest, casResponse: Future[HttpResponse], metrics: CASMetrics): Unit = {
+    for {
+      oldResponse <- casResponse
+      newResponse <- proxyRequest(request, Configuration.proxyNew, metrics)
+    } ResponseComparer.compare(oldResponse,newResponse)
   }
 
   lazy val casRoute: Route = {
+    val metrics = new CASMetrics(Configuration.stage)
     ctx => {
       val request: HttpRequest = ctx.request
-      val casResponse = proxyRequest(request, Configuration.proxy)
+      val casResponse = proxyRequest(request, Configuration.proxy, metrics)
       ctx.complete(casResponse)
-      try {
-        compareSubscriptionRequests(request, casResponse)
-      }
-      catch {
-        case e: Exception => logger.error("Error comparing SubscriptionRequests", e)
-      }
+
+      val uri: Uri = request.uri
+      val isSubsRequest = uri.path != null &&
+        uri.path.toString().contains("/subs")
+
+      if (isSubsRequest) compareSubscriptionResponses(request, casResponse, metrics)
     }
   }
 
