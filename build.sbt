@@ -57,6 +57,6 @@ mappings in Universal ++= NativePackagerHelper.contentOf("cloudformation/resourc
 
 riffRaffPackageType := (packageBin in config("universal")).value
 
-addCommandAlias("devrun", "re-start --- -Dconfig.resource=DEV.conf ")
+addCommandAlias("devrun", "re-start --- -Dconfig.resource=DEV.conf")
 
 Revolver.settings
