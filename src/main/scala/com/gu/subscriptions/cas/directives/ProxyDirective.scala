@@ -83,7 +83,6 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     }
 
     if (isSubsRequest) {
-      logger.info("Subs request made, comparing old with new CAS instances")
       for {
         oldResponse <- casResponse
         newResponse <- proxyRequest(request, Configuration.proxyNew)
