@@ -40,7 +40,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     })
 
   def connectorFromUrl(proxyUri: Uri) = {
-    HostConnectorSetup(proxyUri.authority.host.address, proxyUri.effectivePort, sslEncryption = true)
+    HostConnectorSetup(proxyUri.authority.host.address, proxyUri.effectivePort, sslEncryption = proxyUri.scheme.toLowerCase().equals("https"))
   }
 
   def createProxyRequest(in: HttpRequest, proxyUri: Uri) = {
