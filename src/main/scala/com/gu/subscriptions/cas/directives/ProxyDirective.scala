@@ -48,7 +48,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       (proxyUri.scheme, proxyUri.authority.host.address, proxyUri.effectivePort, proxyUri.path)
     }
     in.copy(
-      uri = in.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme).withPath(Uri.Path(proxyPath.toString() + in.uri.path.toString())),
+      uri = in.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
       headers = in.headers.map {
         case Host(_, _) => Host(proxyHost)
         case header => header
@@ -88,7 +88,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       ctx.complete(casResponse)
 
       val uri: Uri = request.uri
-      val isSubsRequest = uri.path != null &&
+      val isSubsRequest = request.uri.path != null &&
         uri.path.toString().contains("/subs")
 
       if (isSubsRequest) compareSubscriptionResponses(request, casResponse, metrics)
