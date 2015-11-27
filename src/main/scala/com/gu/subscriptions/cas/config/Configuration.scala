@@ -2,7 +2,6 @@ package com.gu.subscriptions.cas.config
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import spray.http.Uri
 
 import scala.collection.JavaConversions._
 import scala.util.Try
@@ -22,11 +21,9 @@ object Configuration {
   val sentryDsn = Try(appConfig.getString("sentry.dsn"))
 
   val proxy = appConfig.getString("proxy")
+  val proxyNew = appConfig.getString("proxyNew")
 
-  val (proxyScheme, proxyHost, proxyPort):(String,String,Int) = {
-    val proxyUri = Uri(proxy)
-    (proxyUri.scheme, proxyUri.authority.host.address, proxyUri.effectivePort)
-  }
+
 
   val nullSettings = EXPECTED_FIELDS.filter(appConfig.getString(_) == null)
 

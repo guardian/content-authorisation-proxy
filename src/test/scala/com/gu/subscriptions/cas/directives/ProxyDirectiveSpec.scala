@@ -1,22 +1,19 @@
 package com.gu.subscriptions.cas.directives
 
-import akka.actor.ActorRef
-import akka.testkit.{TestProbe, TestActorRef}
+import akka.testkit.TestProbe
 import com.gu.membership.zuora.soap.models.Queries.Subscription
-import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.SubscriptionService
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
-import spray.can.Http.HostConnectorSetup
 import spray.http.HttpHeaders._
-import spray.http._
 import spray.http.MediaTypes.`application/json`
+import spray.http.StatusCodes.BadRequest
+import spray.http._
 import spray.json._
 import spray.routing.{HttpService, Route}
 import spray.testkit.ScalatestRouteTest
-import spray.http.StatusCodes.BadRequest
 
 import scala.concurrent.Future
 
@@ -34,9 +31,10 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   val realCasRoute: Route = casRoute
 
   override lazy val casRoute: Route = complete(handledByCAS)
-  override lazy val proxyHost = "example-proxy"
-  override lazy val proxyPort = 443
-  override lazy val proxyScheme = "https"
+  val proxy = "https://example-proxy:443"
+  lazy val proxyUri = Uri(proxy)
+  lazy val proxyHost = proxyUri.authority.host.address
+  lazy val proxyPort = proxyUri.effectivePort
 
   val now = DateTime.now()
   val termEndDate = now.plusYears(1)
@@ -139,17 +137,14 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
           uri = Uri("http://example/endpoint"),
           headers = List(Host("www.example.com"), fooHeader)
         )
+        val proxiedRequest: HttpRequest = createProxyRequest(req, proxyUri)
 
         "updates the URI with proxy info" in {
-          assertResult(Uri("https://example-proxy:443/endpoint"))(proxyRequest(req).uri)
+          assertResult(Uri("https://example-proxy:443/endpoint"))(proxiedRequest.uri)
         }
 
         "updates the host header with the proxy host" in {
-          assertResult(
-            List(Host(proxyHost), fooHeader)
-          )(
-              proxyRequest(req).headers
-            )
+          assertResult(List(Host(proxyHost), fooHeader))(proxiedRequest.headers)
         }
       }
 
@@ -168,24 +163,16 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       }
     }
 
-    "forwarding the HTTP request with host options" - {
+  "forwarding the HTTP request with host options" - {
 
-      val request = new HttpRequest(HttpMethods.GET, "/")
-      val msg = (request, hostConnectorSetup)
+    val request = new HttpRequest(HttpMethods.GET, "/")
+    val hostConnectorSetup = connectorFromUrl(proxyUri)
+    val msg = (createProxyRequest(request, proxyUri), hostConnectorSetup)
 
-      "the host connector setup should point at the proxy" - {
-        assertResult(proxyHost)(hostConnectorSetup.host)
-        assertResult(proxyPort)(hostConnectorSetup.port)
-      }
-
-      "the host connector should be using the hostname verifying SSL engine" - {
-        assertResult(HostnameVerifyingClientSSLEngineProvider.provider)(hostConnectorSetup.sslEngineProvider)
-      }
-
-      "the CAS route should call IO(Http) with the expected HostConnectorSetup" - {
-        sendReceive(request, new CASMetrics("DEV"))
-        testProbe.expectMsg(msg)
-      }
+    "the CAS route should call IO(Http) with the expected HostConnectorSetup" - {
+          proxyRequest(request, proxy, new CASMetrics("Dev"))
+          testProbe.expectMsg(msg)
     }
+  }
 
   }
