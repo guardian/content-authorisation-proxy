@@ -21,7 +21,6 @@ object Configuration {
   val sentryDsn = Try(appConfig.getString("sentry.dsn"))
 
   val proxy = appConfig.getString("proxy")
-  val proxyNew = appConfig.getString("proxyNew")
 
 
 

@@ -6,10 +6,11 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.amazonaws.regions.{Region, Regions}
 import com.gu.subscriptions.cas.config.Configuration
+import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider.provider
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-import com.gu.subscriptions.cas.model.{ResponseComparer, SubscriptionExpiration, SubscriptionRequest}
+import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.gu.subscriptions.cas.service.zuora.ZuoraSubscriptionService
@@ -21,7 +22,7 @@ import spray.http.{HttpRequest, HttpResponse, Uri}
 import spray.httpx.ResponseTransformation._
 import spray.httpx.SprayJsonSupport._
 import spray.routing.{Directives, Route}
-import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider.provider
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -73,25 +74,12 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     resp
   }
 
-  private def compareSubscriptionResponses(request: HttpRequest, casResponse: Future[HttpResponse], metrics: CASMetrics): Unit = {
-    for {
-      oldResponse <- casResponse
-      newResponse <- proxyRequest(request, Configuration.proxyNew, metrics)
-    } ResponseComparer.compare(oldResponse,newResponse)
-  }
-
   lazy val casRoute: Route = {
     val metrics = new CASMetrics(Configuration.stage)
     ctx => {
       val request: HttpRequest = ctx.request
       val casResponse = proxyRequest(request, Configuration.proxy, metrics)
       ctx.complete(casResponse)
-
-      val uri: Uri = request.uri
-      val isSubsRequest = request.uri.path != null &&
-        uri.path.toString().contains("/subs")
-
-      if (isSubsRequest) compareSubscriptionResponses(request, casResponse, metrics)
     }
   }
 
