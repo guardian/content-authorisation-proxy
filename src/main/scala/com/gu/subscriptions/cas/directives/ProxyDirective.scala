@@ -31,7 +31,7 @@ import scala.concurrent.duration._
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   implicit val actorSystem: ActorSystem
-  implicit val timeout: Timeout = 2.seconds
+  implicit val timeout: Timeout = 3.seconds
   lazy val io: ActorRef = IO(Http)
   lazy val subscriptionService: SubscriptionService = ZuoraSubscriptionService
   val filterHeaders: HttpResponse => HttpResponse = resp =>
