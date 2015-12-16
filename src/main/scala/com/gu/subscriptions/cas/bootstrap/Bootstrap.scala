@@ -4,16 +4,21 @@ import akka.actor.Props
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
+import com.gu.subscriptions.cas.config.Configuration.system
+import com.gu.subscriptions.cas.config.Zuora.{Rest, Soap, productFamily}
+import com.gu.subscriptions.cas.service.SubscriptionService
+import com.gu.zuora.ZuoraService
 import spray.can.Http
 
 import scala.concurrent.duration._
-import com.gu.subscriptions.cas.config.Configuration.system
 
 object Bootstrap extends App {
 
   SentryLogging.init()
 
-  val service = system.actorOf(Props[CASService])
+  val zuoraService = new ZuoraService(Soap.client, Rest.client, productFamily)
+  val subscriptionService = new SubscriptionService(zuoraService)
+  val service = system.actorOf(Props(classOf[CASService], subscriptionService))
 
   implicit val timeout = Timeout(5.seconds)
 

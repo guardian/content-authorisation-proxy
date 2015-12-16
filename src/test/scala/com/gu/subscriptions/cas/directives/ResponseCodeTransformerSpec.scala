@@ -1,5 +1,6 @@
 package com.gu.subscriptions.cas.directives
-import com.gu.cas.CAS.CASError
+
+import com.gu.subscriptions.CAS.CASError
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import spray.http.MediaTypes.`application/json`
 import spray.http.StatusCodes._

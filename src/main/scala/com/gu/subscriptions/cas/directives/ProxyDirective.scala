@@ -12,8 +12,7 @@ import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
-import com.gu.subscriptions.cas.service.SubscriptionService
-import com.gu.subscriptions.cas.service.zuora.ZuoraSubscriptionService
+import com.gu.subscriptions.cas.service.api.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
 import spray.can.Http
 import spray.can.Http.HostConnectorSetup
@@ -29,11 +28,11 @@ import scala.concurrent.duration._
 
 
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
-
   implicit val actorSystem: ActorSystem
   implicit val timeout: Timeout = 3.seconds
+  def subscriptionService: SubscriptionService
+
   lazy val io: ActorRef = IO(Http)
-  lazy val subscriptionService: SubscriptionService = ZuoraSubscriptionService
   val filterHeaders: HttpResponse => HttpResponse = resp =>
     resp.withHeaders(resp.headers.filter {
       case Date(_) | `Content-Type`(_) | Server(_) | `Content-Length`(_) => false
@@ -45,7 +44,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   }
 
   def createProxyRequest(in: HttpRequest, proxyUri: Uri) = {
-    val (proxyScheme, proxyHost, proxyPort, proxyPath) = {
+    val (proxyScheme, proxyHost, proxyPort, _) = {
       (proxyUri.scheme, proxyUri.authority.host.address, proxyUri.effectivePort, proxyUri.path)
     }
     in.copy(

@@ -1,20 +1,18 @@
 package com.gu.subscriptions.cas.config
 
 import akka.actor.ActorSystem
+import com.gu.config.DigitalPack
 import com.typesafe.config.ConfigFactory
 
 import scala.collection.JavaConversions._
 import scala.util.Try
-
 
 object Configuration {
   val appName = "content-authorisation-proxy"
 
   val appConfig = ConfigFactory.load()
 
-  val EXPECTED_FIELDS = List(
-    "proxy"
-  )
+  val EXPECTED_FIELDS = List("proxy")
 
   val stage = appConfig.getString("stage")
 
@@ -22,11 +20,12 @@ object Configuration {
 
   val proxy = appConfig.getString("proxy")
 
-
-
   val nullSettings = EXPECTED_FIELDS.filter(appConfig.getString(_) == null)
 
   lazy val knownProducts = appConfig.getStringList("knownProducts").toList
 
   implicit val system = ActorSystem("subscriptions-cas")
+
+  def productFamily(env: String) = DigitalPack.fromConfig(
+    appConfig.getConfig(s"touchpoint.backend.environments.$env.zuora.ratePlanIds"))
 }

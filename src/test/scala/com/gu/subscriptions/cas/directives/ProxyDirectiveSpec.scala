@@ -1,10 +1,10 @@
 package com.gu.subscriptions.cas.directives
 
 import akka.testkit.TestProbe
-import com.gu.membership.zuora.soap.models.Queries.Subscription
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
-import com.gu.subscriptions.cas.service.SubscriptionService
+import com.gu.subscriptions.cas.service.api.SubscriptionService
+import com.gu.zuora.soap.models.Queries.Subscription
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
 import spray.http.HttpHeaders._
@@ -36,7 +36,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   lazy val proxyHost = proxyUri.authority.host.address
   lazy val proxyPort = proxyUri.effectivePort
 
-  val now = DateTime.now()
+  val now = new DateTime()
   val termEndDate = now.plusYears(1)
   val expiration = SubscriptionExpiration(termEndDate)
   val subsName = "A-S123"
@@ -104,64 +104,62 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
           }
         }
       }
-
-
-        "without a Zuora format" - {
-          "proxies the request to CAS" in {
-            val payload = SubscriptionRequest(Some("id"), "password").toJson.toString()
-            val req = HttpEntity(`application/json`, payload)
-
-            Post("/subs", req) ~> inJson(subsRoute) ~> check {
-              assertResult(responseAs[String])(handledByCAS)
-            }
-          }
-        }
-      }
-
-      "when an invalid subs request is made" - {
-        "returns a bad request error" in {
-          val req = HttpEntity(`application/json`, "invalid json")
+      "without a Zuora format" - {
+        "proxies the request to CAS" in {
+          val payload = SubscriptionRequest(Some("id"), "password").toJson.toString()
+          val req = HttpEntity(`application/json`, payload)
 
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
-            assertResult(BadRequest)(status)
+            assertResult(responseAs[String])(handledByCAS)
           }
         }
       }
     }
 
-    "proxying to CAS" - {
-      val fooHeader = RawHeader("foo", "bar")
+    "when an invalid subs request is made" - {
+      "returns a bad request error" in {
+        val req = HttpEntity(`application/json`, "invalid json")
 
-      "proxyRequest" - {
-        val req = HttpRequest(
-          uri = Uri("http://example/endpoint"),
-          headers = List(Host("www.example.com"), fooHeader)
-        )
-        val proxiedRequest: HttpRequest = createProxyRequest(req, proxyUri)
-
-        "updates the URI with proxy info" in {
-          assertResult(Uri("https://example-proxy:443/endpoint"))(proxiedRequest.uri)
-        }
-
-        "updates the host header with the proxy host" in {
-          assertResult(List(Host(proxyHost), fooHeader))(proxiedRequest.headers)
-        }
-      }
-
-      "filterHeaders" - {
-        "filters some headers out of the proxy response" in {
-          val resp = HttpResponse(headers = List(
-            Date(spray.http.DateTime.now),
-            `Content-Type`(`application/json`),
-            Server("Nginx"),
-            `Content-Length`(1024L),
-            fooHeader
-          ))
-
-          assertResult(List(fooHeader))(filterHeaders(resp).headers)
+        Post("/subs", req) ~> inJson(subsRoute) ~> check {
+          assertResult(BadRequest)(status)
         }
       }
     }
+  }
+
+  "proxying to CAS" - {
+    val fooHeader = RawHeader("foo", "bar")
+
+    "proxyRequest" - {
+      val req = HttpRequest(
+        uri = Uri("http://example/endpoint"),
+        headers = List(Host("www.example.com"), fooHeader)
+      )
+      val proxiedRequest: HttpRequest = createProxyRequest(req, proxyUri)
+
+      "updates the URI with proxy info" in {
+        assertResult(Uri("https://example-proxy:443/endpoint"))(proxiedRequest.uri)
+      }
+
+      "updates the host header with the proxy host" in {
+        assertResult(List(Host(proxyHost), fooHeader))(proxiedRequest.headers)
+      }
+    }
+
+    "filterHeaders" - {
+      "filters some headers out of the proxy response" in {
+        val resp = HttpResponse(headers = List(
+          Date(spray.http.DateTime.now),
+          `Content-Type`(`application/json`),
+          Server("Nginx"),
+          `Content-Length`(1024L),
+          fooHeader
+        ))
+
+        assertResult(List(fooHeader))(filterHeaders(resp).headers)
+      }
+    }
+  }
 
   "forwarding the HTTP request with host options" - {
 
@@ -170,9 +168,9 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     val msg = (createProxyRequest(request, proxyUri), hostConnectorSetup)
 
     "the CAS route should call IO(Http) with the expected HostConnectorSetup" - {
-          proxyRequest(request, proxy, new CASMetrics("Dev"))
-          testProbe.expectMsg(msg)
+      proxyRequest(request, proxy, new CASMetrics("Dev"))
+      testProbe.expectMsg(msg)
     }
   }
 
-  }
+}
