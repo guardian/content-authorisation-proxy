@@ -1,6 +1,6 @@
 package com.gu.subscriptions.cas.model.json
 
-import com.gu.cas.CAS.CASError
+import com.gu.subscriptions.CAS.CASError
 import com.gu.subscriptions.cas.model.{SubscriptionRequest, SubscriptionExpiration}
 import spray.json._
 
