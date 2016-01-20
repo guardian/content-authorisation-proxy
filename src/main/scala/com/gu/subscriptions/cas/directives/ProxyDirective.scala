@@ -84,11 +84,11 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   val authRoute: Route = (path("auth") & post)(casRoute)
 
-  def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { subscriptionName =>
+  def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { (activation, subscriptionName) =>
     val validSubscription = subscriptionService.getValidSubscription(subscriptionName, subsReq.password)
     onSuccess(validSubscription) {
       case Some(subscription) =>
-        subscriptionService.updateActivationDate(subscription)
+        if (activation) { subscriptionService.updateActivationDate(subscription) }
         complete(SubscriptionExpiration(subscription.termEndDate))
       case _ =>
         notFound
