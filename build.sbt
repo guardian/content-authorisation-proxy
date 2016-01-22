@@ -8,7 +8,10 @@ scalaVersion  := "2.11.6"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
-resolvers += "Guardian Github Releases" at "http://guardian.github.com/maven/repo-releases"
+resolvers ++= Seq(
+  "Guardian Github Releases" at "http://guardian.github.com/maven/repo-releases",
+  Resolver.sonatypeRepo("releases")
+)
 
 testOptions in Test += Tests.Argument("-oF")
 
