@@ -4,8 +4,11 @@ import akka.actor.Props
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
-import com.gu.subscriptions.cas.config.Configuration.system
-import com.gu.subscriptions.cas.config.Zuora.{Rest, Soap, productFamily}
+import com.gu.memsub.services.{CatalogService, SubscriptionService => CommonSubscriptionService}
+import com.gu.monitoring.ServiceMetrics
+import com.gu.stripe.{StripeApiConfig, StripeService}
+import com.gu.subscriptions.cas.config.Configuration.{system, _}
+import com.gu.subscriptions.cas.config.Zuora.{Rest, Soap}
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.gu.zuora.ZuoraService
 import spray.can.Http
@@ -16,8 +19,20 @@ object Bootstrap extends App {
 
   SentryLogging.init()
 
-  val zuoraService = new ZuoraService(Soap.client, Rest.client, productFamily)
-  val subscriptionService = new SubscriptionService(zuoraService)
+  implicit val ec = system.dispatcher
+
+  //This application does not use Stripe
+  val stripeService = {
+    val stripeApiConfig = StripeApiConfig.from(touchpointConfig, stage)
+    val stripeMetrics = new ServiceMetrics(stage, "CAS proxy", "Stripe")
+    new StripeService(stripeApiConfig, stripeMetrics)
+  }
+
+  val zuoraService = new ZuoraService(Soap.client, Rest.client, digipackPlans)
+  val catalogService = CatalogService(Rest.client, membershipPlans, digipackPlans, stage)
+
+  val commonSubscriptionService = new CommonSubscriptionService(zuoraService, stripeService, catalogService)
+  val subscriptionService = new SubscriptionService(zuoraService, commonSubscriptionService, catalogService)
   val service = system.actorOf(Props(classOf[CASService], subscriptionService))
 
   implicit val timeout = Timeout(5.seconds)

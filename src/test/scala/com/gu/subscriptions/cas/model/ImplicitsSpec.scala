@@ -6,7 +6,7 @@ import Implicits.ContactOpts
 
 class ImplicitsSpec extends FlatSpec with Matchers {
   behavior of "ContactOps.samePostcode"
-  def contact(postcode: String) = Contact("id", "FirstName", "LastName", postcode)
+  def contact(postcode: String) = Contact("id", "FirstName", "LastName", Some(postcode))
 
   it should "ignore case of either arguments" in {
     contact("N1 9GU").samePostcode("n1 9gu") should be(true)

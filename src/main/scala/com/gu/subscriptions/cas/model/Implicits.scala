@@ -8,7 +8,7 @@ object Implicits {
     def samePostcode(otherPostalCode: String): Boolean = {
       def format(pc: String): String = pc.replaceAll("\\s+", "").toLowerCase
 
-      format(contact.postalCode) == format(otherPostalCode)
+      contact.postalCode.exists(pc => format(pc) == format(otherPostalCode))
     }
   }
 }

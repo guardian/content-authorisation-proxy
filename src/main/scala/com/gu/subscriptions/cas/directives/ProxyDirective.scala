@@ -89,7 +89,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     onSuccess(validSubscription) {
       case Some(subscription) =>
         if (activation) { subscriptionService.updateActivationDate(subscription) }
-        complete(SubscriptionExpiration(subscription.termEndDate))
+        complete(SubscriptionExpiration(subscription.termEndDate.toDateTimeAtStartOfDay()))
       case _ =>
         notFound
     }

@@ -1,28 +1,25 @@
 package com.gu.subscriptions.cas.service
 
 import com.github.nscala_time.time.Imports._
-import com.gu.subscriptions.cas.config.Configuration._
+import com.gu.memsub.Subscription
+import com.gu.memsub.Subscription.Name
+import com.gu.memsub.services.CatalogService
+import com.gu.memsub.services.api.{SubscriptionService => CommonSubscriptionService}
+import com.gu.subscriptions.cas.config.Configuration.productFamily
 import com.gu.subscriptions.cas.config.Zuora._
 import com.gu.subscriptions.cas.model.Implicits.ContactOpts
 import com.gu.zuora.api.ZuoraService
-import com.gu.zuora.soap.models.Queries.Subscription
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SubscriptionService(zuoraService: ZuoraService) extends api.SubscriptionService with LazyLogging  {
-  def getValidSubscription(subscriptionName: String, password: String): Future[Option[Subscription]] = {
+class SubscriptionService(zuoraService: ZuoraService, commonSubscriptionService: CommonSubscriptionService, catalogService: CatalogService) extends api.SubscriptionService with LazyLogging  {
+  def getValidSubscription(subscriptionName: Name, password: String): Future[Option[Subscription]] = {
     def checkSubscriptionValidity(subscription: Subscription): Future[Boolean] = {
-      val knownProductCheck = for {
-        ratePlan <- zuoraService.getRatePlan(subscription)
-        productRatePlan <- zuoraService.getProductRatePlan(ratePlan)
-        product <- zuoraService.getProduct(productRatePlan)
-      } yield knownProducts.contains(product.name)
-
       val postcodeCheck =
         for {
-          account <- zuoraService.getAccount(subscription)
+          account <- zuoraService.getAccount(subscription.accountId)
           contact <- zuoraService.getContact(account.billToId)
         } yield {
           val postcodesMatch = contact.samePostcode(password)
@@ -34,20 +31,19 @@ class SubscriptionService(zuoraService: ZuoraService) extends api.SubscriptionSe
         }
 
       for {
-        productsMatch <- knownProductCheck
         postcodesMatch <- postcodeCheck
-      } yield productsMatch && postcodesMatch
+      } yield postcodesMatch
     }
 
     for {
-      subscription <- zuoraService.getLatestSubscriptionByName(subscriptionName)
-      isValid <- subscription.fold(Future {false})(checkSubscriptionValidity)
+      subscription <- commonSubscriptionService.get(subscriptionName)
+      isValid <- subscription.fold(Future.successful(false))(checkSubscriptionValidity)
     } yield subscription.filter(_ => isValid)
   }
 
   def isReady: Boolean = zuoraService.lastPingTimeWithin(2.minutes)
 
-  override def updateActivationDate(subscription: Subscription): Unit =
-    zuoraService.updateActivationDate(subscription)
+  def updateActivationDate(subscription: Subscription): Unit =
+    commonSubscriptionService.updateActivationDate(subscription)
 }
 
