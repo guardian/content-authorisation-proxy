@@ -17,7 +17,7 @@ class ZuoraDirectiveTest extends FlatSpec with Matchers with ScalatestRouteTest 
   "A SubscriptionRequest" should "pass if subscriberId starts with A-S" in {
     val subscriptionRequest = new SubscriptionRequest(Some("A-S00056789"), "password")
     val route: Route = ZuoraDirective.zuoraDirective(subscriptionRequest) { (triggersActivation, subId) =>
-      complete(subId.get)
+      complete(subId)
     }
     Get("/") ~> route ~> check {
       responseAs[String] should be("A-S00056789")
@@ -27,7 +27,7 @@ class ZuoraDirectiveTest extends FlatSpec with Matchers with ScalatestRouteTest 
   "A SubscriptionRequest" should "be rejected if the subscriberId does not start with A-S" in {
     val subscriptionRequest = new SubscriptionRequest(Some("100056789"), "password")
     val route: Route = ZuoraDirective.zuoraDirective(subscriptionRequest) { (triggersActivation, subId) =>
-      complete(subId.get)
+      complete(subId)
     }
     Get("/") ~> route ~> check {
       assert(!handled)
