@@ -9,7 +9,7 @@ import ModelJsonProtocol._
 
 class ModelJsonProtocolSpec extends FreeSpec {
   "For CASError" - {
-    val error = CASErrorWrapper(CASError("message", Some(-1)))
+    val error = CASErrorWrapper(CASError("message", -1))
     val json =
       """
         |{ "error": { "message": "message", "code": -1 } }

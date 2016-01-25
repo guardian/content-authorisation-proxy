@@ -1,10 +1,10 @@
 package com.gu.subscriptions.cas.config
 
 import akka.actor.ActorSystem
-import com.gu.config.{MembershipRatePlanIds, DigitalPackRatePlanIds}
-import com.gu.memsub.Digipack
+import com.gu.config.DigitalPack
 import com.typesafe.config.ConfigFactory
 
+import scala.collection.JavaConversions._
 import scala.util.Try
 
 object Configuration {
@@ -22,11 +22,10 @@ object Configuration {
 
   val nullSettings = EXPECTED_FIELDS.filter(appConfig.getString(_) == null)
 
+  lazy val knownProducts = appConfig.getStringList("knownProducts").toList
+
   implicit val system = ActorSystem("subscriptions-cas")
 
-  val touchpointConfig = appConfig.getConfig("touchpoint.backend.environments").getConfig(stage)
-
-  val digipackPlans = DigitalPackRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.digitalpack"))
-  val membershipPlans = MembershipRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.membership"))
-  implicit val productFamily = Digipack()
+  def productFamily(env: String) = DigitalPack.fromConfig(
+    appConfig.getConfig(s"touchpoint.backend.environments.$env.zuora.ratePlanIds"))
 }
