@@ -7,7 +7,7 @@ import com.gu.memsub.services.CatalogService
 import com.gu.memsub.services.api.{SubscriptionService => CommonSubscriptionService}
 import com.gu.subscriptions.cas.config.Configuration.productFamily
 import com.gu.subscriptions.cas.config.Zuora._
-import com.gu.subscriptions.cas.model.Implicits.ContactOpts
+import com.gu.subscriptions.cas.model.ContactOps.WithMatchingPassword
 import com.gu.zuora.api.ZuoraService
 import com.typesafe.scalalogging.LazyLogging
 
@@ -22,12 +22,11 @@ class SubscriptionService(zuoraService: ZuoraService, commonSubscriptionService:
           account <- zuoraService.getAccount(subscription.accountId)
           contact <- zuoraService.getContact(account.billToId)
         } yield {
-          val postcodesMatch = contact.samePostcode(password)
-          if (!postcodesMatch) {
-            cloudWatch.put("Postcodes not matching", 1)
-            logger.info(s"Postcodes not matching: ${contact.postalCode}, $password")
+          val isValid = contact.matchesPassword(password)
+          if (!isValid) {
+            cloudWatch.put("Postcode or last name does not match", 1)
           }
-          postcodesMatch
+          isValid
         }
 
       for {
