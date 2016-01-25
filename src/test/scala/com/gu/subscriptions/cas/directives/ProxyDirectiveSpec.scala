@@ -1,10 +1,12 @@
 package com.gu.subscriptions.cas.directives
 
 import akka.testkit.TestProbe
+import com.gu.i18n.GBP
+import com.gu.memsub.Subscription
+import com.gu.memsub.Subscription.{FeatureId, ProductRatePlanId, Name}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
-import com.gu.zuora.soap.models.Queries.Subscription
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
 import spray.http.HttpHeaders._
@@ -38,31 +40,38 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   val now = new DateTime()
   val termEndDate = now.plusYears(1)
-  val expiration = SubscriptionExpiration(termEndDate)
+  val expiration = SubscriptionExpiration(termEndDate.plusDays(1))
   val subsName = "A-S123"
 
-  val validSubscription = Subscription(
-    id = "123",
-    name = subsName,
-    accountId = "123",
-    version = 1,
-    termStartDate = now,
-    termEndDate = termEndDate,
-    contractAcceptanceDate = now,
-    activationDate = None
+  val validSubscription: Subscription = new Subscription(
+      id = Subscription.Id("e4124121241234235f3245234"),
+      name = Subscription.Name(subsName),
+      accountId = Subscription.AccountId("a123"),
+      currency = GBP,
+      productRatePlanId = ProductRatePlanId("123"),
+      productName = "DigitalPack",
+      startDate = new DateTime().toLocalDate,
+      termEndDate = new DateTime().plusYears(1).toLocalDate,
+      features = Set(),
+      casActivationDate = None,
+      isCancelled = false,
+      ratePlanId = "1234",
+      isPaid = true
   )
+
+
 
   override lazy val subscriptionService = new SubscriptionService {
 
-    def checkSubscriptionValidity(subscription: Subscription, postcode: String) = Future {subscription.name.startsWith("A-S")}
+    def checkSubscriptionValidity(subscription: Subscription, postcode: String) = Future {subscription.name.get.startsWith("A-S")}
 
     def getSubscription(name: String): Future[Option[Subscription]] = Future {Some(validSubscription)}
 
     override def updateActivationDate(subscription: Subscription): Unit = ()
 
-    override def getValidSubscription(subscriptionName: String, password: String) =
+    override def getValidSubscription(subscriptionName: Name, password: String) =
       Future {
-        if (subscriptionName == subsName)
+        if (subscriptionName.get == subsName)
           Some(validSubscription)
         else
           None
@@ -82,7 +91,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   "for the /subs endpoint" - {
     "when a valid request is made" - {
       "with a Zuora-formatted subscriber id" - {
-        "returns the expiration" in {
+        "returns the expiration with one day leeway" in {
           val payload = SubscriptionRequest(Some(subsName), "password").toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 

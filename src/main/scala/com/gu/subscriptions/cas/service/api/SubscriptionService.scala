@@ -1,14 +1,15 @@
 package com.gu.subscriptions.cas.service.api
 
-import com.gu.zuora.soap.models.{Queries => SoapQueries}
+import com.gu.memsub.Subscription
+import com.gu.memsub.Subscription.Name
 
 import scala.concurrent.Future
 
 trait SubscriptionService {
 
-  def updateActivationDate(subscription: SoapQueries.Subscription): Unit
+  def updateActivationDate(subscription: Subscription): Unit
 
-  def getValidSubscription(subscriptionName: String, password: String) : Future[Option[SoapQueries.Subscription]]
+  def getValidSubscription(subscriptionName: Name, password: String) : Future[Option[Subscription]]
 
   def isReady: Boolean
 }

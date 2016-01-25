@@ -35,8 +35,8 @@ object ResponseCodeTransformer {
     }.map(_.error).map {
       // Caveat: A malformed json payload send to the /auth endpoint will result in an HTML 404 response by
       // the CAS server so won't be caught in the pattern match below.
-      case CASError(_, BadRequestCode(_)) => resp.copy(status = BadRequest)
-      case CASError(_, UnauthorizedCode(_)) => resp.copy(status = Unauthorized)
+      case CASError(_, Some(BadRequestCode(_))) => resp.copy(status = BadRequest)
+      case CASError(_, Some(UnauthorizedCode(_))) => resp.copy(status = Unauthorized)
       case _ => resp.copy(status = InternalServerError)
     }.getOrElse(resp)
 }

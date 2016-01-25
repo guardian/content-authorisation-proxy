@@ -8,7 +8,10 @@ scalaVersion  := "2.11.6"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
-resolvers += "Guardian Github Releases" at "http://guardian.github.com/maven/repo-releases"
+resolvers ++= Seq(
+  "Guardian Github Releases" at "http://guardian.github.com/maven/repo-releases",
+  Resolver.sonatypeRepo("releases")
+)
 
 testOptions in Test += Tests.Argument("-oF")
 
@@ -30,7 +33,7 @@ libraryDependencies ++= {
     "net.kencochrane.raven" % "raven-logback" % "6.0.0",
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
     "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.9.39",
-    "com.gu" %% "membership-common" % "0.120",
+    "com.gu" %% "membership-common" % "0.138",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   )
 }
