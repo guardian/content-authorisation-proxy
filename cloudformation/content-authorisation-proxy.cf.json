@@ -62,7 +62,7 @@
         "CASProxyLaunchConfig" : {
             "Type" : "AWS::AutoScaling::LaunchConfiguration",
             "Properties" : {
-                "ImageId" : "ami-177c4d60",
+                "ImageId" : "ami-6857e51b",
                 "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
                 "InstanceType" : "t2.small",
                 "KeyName" : { "Ref" : "KeyName" },
