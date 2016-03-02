@@ -7,6 +7,7 @@ import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.regions.{Region, ServiceAbbreviations}
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsyncClient
 import com.amazonaws.services.cloudwatch.model.{Dimension, MetricDatum, PutMetricDataRequest}
+import com.google.common.util.concurrent.RateLimiter
 import com.typesafe.scalalogging.LazyLogging
 
 trait CloudWatch extends LazyLogging  {
@@ -23,11 +24,19 @@ trait CloudWatch extends LazyLogging  {
     client
   }
 
-  trait LoggingAsyncHandler extends AsyncHandler[PutMetricDataRequest, Void]
-  {
+  trait LoggingAsyncHandler extends AsyncHandler[PutMetricDataRequest, Void] {
+
+    val rateLimiter = RateLimiter.create(0.1)
+
     def onError(exception: Exception)
     {
-      logger.info(s"CloudWatch PutMetricDataRequest error: ${exception.getMessage}}")
+      if (exception.getMessage.startsWith("Rate exceeded")) {
+        if (rateLimiter.tryAcquire) {
+          logger.warn(s"CloudWatch PutMetricDataRequest rate exceeded: ${exception.getMessage}}")
+        }
+      } else {
+        logger.info(s"CloudWatch PutMetricDataRequest error: ${exception.getMessage}}")
+      }
     }
     def onSuccess(request: PutMetricDataRequest, result: Void )
     {
