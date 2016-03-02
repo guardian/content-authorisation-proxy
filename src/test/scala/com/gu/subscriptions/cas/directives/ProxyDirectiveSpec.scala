@@ -3,7 +3,7 @@ package com.gu.subscriptions.cas.directives
 import akka.testkit.TestProbe
 import com.gu.i18n.GBP
 import com.gu.memsub.Subscription
-import com.gu.memsub.Subscription.{FeatureId, ProductRatePlanId, Name}
+import com.gu.memsub.Subscription.{ProductRatePlanId, Name}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
@@ -50,13 +50,15 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       currency = GBP,
       productRatePlanId = ProductRatePlanId("123"),
       productName = "DigitalPack",
-      startDate = new DateTime().toLocalDate,
+      startDate = now.toLocalDate,
+      termStartDate = now.toLocalDate,
       termEndDate = new DateTime().plusYears(1).toLocalDate,
-      features = Set(),
+      features = List.empty[Subscription.Feature],
       casActivationDate = None,
       isCancelled = false,
       ratePlanId = "1234",
-      isPaid = true
+      isPaid = true,
+      promoCode = None
   )
 
 

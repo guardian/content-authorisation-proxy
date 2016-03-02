@@ -1,7 +1,7 @@
 package com.gu.subscriptions.cas.service
 
 import com.github.nscala_time.time.Imports._
-import com.gu.memsub.Subscription
+import com.gu.memsub.{Digipack, Subscription}
 import com.gu.memsub.Subscription.Name
 import com.gu.memsub.services.CatalogService
 import com.gu.memsub.services.api.{SubscriptionService => CommonSubscriptionService}

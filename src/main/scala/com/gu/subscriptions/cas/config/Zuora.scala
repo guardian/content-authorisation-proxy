@@ -12,7 +12,7 @@ object Zuora {
     val metrics = new ServiceMetrics(appStage, appName, "zuora-soap-client")
     val client = new ClientWithFeatureSupplier(featureCodes = Set.empty,
                                                apiConfig = apiConfig,
-                                               metrics = metrics,
+                                               metrics = metrics)(
                                                actorSystem = Configuration.system)
   }
 
