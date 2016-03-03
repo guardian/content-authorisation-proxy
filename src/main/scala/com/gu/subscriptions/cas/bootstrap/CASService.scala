@@ -20,7 +20,7 @@ class CASService(val subscriptionService: SubscriptionService) extends HttpServi
 
   implicit def exceptionHandler(implicit log: LoggingContext) = ExceptionHandler {
       case e: Throwable =>
-        logger.error("Generic error", e)
+        logger.error(s"Generic error - ${e.getMessage}", e)
         serverError
   }
 
