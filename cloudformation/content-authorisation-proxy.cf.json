@@ -27,6 +27,16 @@
             "Description" : "Applied directly as a tag",
             "Default": "PROD",
             "AllowedValues": [ "CODE", "PROD" ]
+        },
+        "InstanceType" : {
+            "Type" : "String",
+            "Description" : "EC2 instance type",
+            "AllowedValues" : [ "t2.micro", "t2.small", "t2.medium" ],
+            "ConstraintDescription" : "must be a valid EC2 instance type."
+        },
+        "ImageId": {
+            "Description": "AMI ID",
+            "Type": "String"
         }
     },
     "Mappings": {
@@ -62,9 +72,9 @@
         "CASProxyLaunchConfig" : {
             "Type" : "AWS::AutoScaling::LaunchConfiguration",
             "Properties" : {
-                "ImageId" : "ami-6857e51b",
+                "ImageId" : { "Ref" : "ImageId" },
                 "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
-                "InstanceType" : "t2.small",
+                "InstanceType" : { "Ref" : "InstanceType" },
                 "KeyName" : { "Ref" : "KeyName" },
                 "IamInstanceProfile": { "Ref" : "SubscriptionsAppInstanceProfile" },
                 "AssociatePublicIpAddress": true,
@@ -79,12 +89,8 @@
                         "apt-get -y update",
                         "apt-get -y upgrade",
 
-                        {"Fn::Join":["", ["echo https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/content-authorisation-proxy-0.1.zip > /etc/gu-artifact-url" ]]},
-
+                        {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/content-authorisation-proxy-0.1.zip /tmp"]]},
                         "adduser --system --home /subscriptions --disabled-password subscriptions",
-
-                        "wget -i /etc/gu-artifact-url --directory-prefix=/tmp",
-
                         "unzip -d /subscriptions /tmp/content-authorisation-proxy-0.1.zip",
 
                         "mkdir /etc/gu",
