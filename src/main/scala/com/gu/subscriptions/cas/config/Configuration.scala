@@ -28,5 +28,5 @@ object Configuration {
 
   val digipackPlans = DigitalPackRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.digitalpack"))
   val membershipPlans = MembershipRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.membership"))
-  implicit val productFamily = Digipack()
+  implicit val productFamily = Digipack
 }
