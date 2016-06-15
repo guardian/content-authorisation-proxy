@@ -34,7 +34,7 @@ object Bootstrap extends App {
   val zuoraService = new ZuoraService(Soap.client, Rest.client, digipackPlans)
   val catalogService = CatalogService(Rest.client, membershipPlans, digipackPlans, stage)
 
-  val commonSubscriptionService = new CommonSubscriptionService(zuoraService, stripeService, catalogService)
+  val commonSubscriptionService = new CommonSubscriptionService(zuoraService, stripeService, catalogService.digipackCatalog)
   val subscriptionService = new SubscriptionService(zuoraService, commonSubscriptionService, catalogService)
   val service = system.actorOf(Props(classOf[CASService], subscriptionService))
 

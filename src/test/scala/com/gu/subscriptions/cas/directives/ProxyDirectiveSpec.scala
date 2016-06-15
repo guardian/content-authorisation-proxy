@@ -3,7 +3,8 @@ package com.gu.subscriptions.cas.directives
 import akka.testkit.TestProbe
 import com.gu.i18n.GBP
 import com.gu.memsub.Subscription
-import com.gu.memsub.Subscription.{ProductRatePlanId, Name}
+import com.gu.memsub.Subscription.{Name, ProductRatePlanId}
+import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
@@ -65,9 +66,11 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   override lazy val subscriptionService = new SubscriptionService {
 
-    def checkSubscriptionValidity(subscription: Subscription, postcode: String) = Future {subscription.name.get.startsWith("A-S")}
+    def checkSubscriptionValidity(subscription: Subscription, postcode: String) =
+      Future.successful(subscription.name.get.startsWith("A-S"))
 
-    def getSubscription(name: String): Future[Option[Subscription]] = Future {Some(validSubscription)}
+    def getSubscription(name: String): Future[Option[Subscription]] =
+      Future.successful(Some(validSubscription))
 
     override def updateActivationDate(subscription: Subscription): Unit = ()
 
@@ -105,7 +108,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
       "when an Invalid request is made" - {
         "with a Zuora-formatted subscriber id" - {
-          "returns the expiration" in {
+          "Returns a 404" in {
             val payload = SubscriptionRequest(Some("A-S-invalid"), "password").toJson.toString()
             val req = HttpEntity(`application/json`, payload)
 

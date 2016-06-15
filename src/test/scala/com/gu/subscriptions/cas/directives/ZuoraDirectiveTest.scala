@@ -14,25 +14,18 @@ class ZuoraDirectiveTest extends FlatSpec with Matchers with ScalatestRouteTest 
 
   implicit val actorSystem = system
 
-  "A SubscriptionRequest" should "pass if subscriberId starts with A-S" in {
-    val subscriptionRequest = new SubscriptionRequest(Some("A-S00056789"), "password")
-    val route: Route = ZuoraDirective.zuoraDirective(subscriptionRequest) { (triggersActivation, subId) =>
-      complete(subId.get)
-    }
-    Get("/") ~> route ~> check {
-      responseAs[String] should be("A-S00056789")
-    }
+  def routeFor(s: SubscriptionRequest): Route =
+    ZuoraDirective.zuoraDirective(s) { (triggersActivation, subId) => complete(subId.get)}
+
+  "A SubscriptionRequest" should "pass always" in {
+
+    // we always want to check zuora now people are being migrated over
+    val zuoraSubRequest = new SubscriptionRequest(Some("A-S00056789"), "password")
+    val casSubRequest = new SubscriptionRequest(Some("00123455"), "password")
+    Get("/") ~> routeFor(zuoraSubRequest) ~> check { responseAs[String] should be("A-S00056789") }
+    Get("/") ~> routeFor(casSubRequest) ~> check { responseAs[String] should be("00123455") }
   }
 
-  "A SubscriptionRequest" should "be rejected if the subscriberId does not start with A-S" in {
-    val subscriptionRequest = new SubscriptionRequest(Some("100056789"), "password")
-    val route: Route = ZuoraDirective.zuoraDirective(subscriptionRequest) { (triggersActivation, subId) =>
-      complete(subId.get)
-    }
-    Get("/") ~> route ~> check {
-      assert(!handled)
-    }
-  }
 
   "A SubscriptionRequest" should "return a true triggersActivation value unless given a noActivation query parameter" in {
     val subscriptionRequest = new SubscriptionRequest(Some("A-S00056789"), "password")

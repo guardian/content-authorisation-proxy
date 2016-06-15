@@ -14,7 +14,7 @@ object ZuoraDirective {
 
 class ZuoraDirective(subscriptionRequest: SubscriptionRequest) extends Directive[TriggersActivation :: Name :: HNil] {
   override def happly(f: (TriggersActivation :: Name :: HNil) => Route): Route = {
-    subscriptionRequest.subscriberId.filter(_.startsWith("A-S")) match {
+    subscriptionRequest.subscriberId match {
       case Some(subId) =>
         parameter("noActivation") { _ =>
           f(false :: Name(subId) :: HNil)

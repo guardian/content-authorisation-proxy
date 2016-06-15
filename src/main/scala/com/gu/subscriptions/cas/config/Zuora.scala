@@ -7,13 +7,15 @@ import com.gu.zuora.soap.ClientWithFeatureSupplier
 import com.gu.zuora.{ZuoraApiConfig, rest}
 
 object Zuora {
+
+  implicit val actorSystem = Configuration.system
+
   object Soap {
     val apiConfig = ZuoraApiConfig.soap(touchpointConfig, appStage)
     val metrics = new ServiceMetrics(appStage, appName, "zuora-soap-client")
     val client = new ClientWithFeatureSupplier(featureCodes = Set.empty,
                                                apiConfig = apiConfig,
-                                               metrics = metrics)(
-                                               actorSystem = Configuration.system)
+                                               metrics = metrics)
   }
 
   object Rest {
