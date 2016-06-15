@@ -91,8 +91,8 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       case Some(subscription) =>
         if (activation) { subscriptionService.updateActivationDate(subscription) }
         complete(SubscriptionExpiration(subscription.termEndDate.toDateTimeAtStartOfDay()))
-      case _ =>
-        reject
+      case _ if subscriptionName.get.startsWith("A-S") => notFound //no point going to CAS if this is a Zuora sub
+      case _ => reject
     }
   }
 

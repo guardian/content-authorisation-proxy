@@ -40,7 +40,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   val now = new DateTime()
   val termEndDate = now.plusYears(1)
-  val expiration = SubscriptionExpiration(termEndDate.plusDays(1))
+  val expiration = SubscriptionExpiration(termEndDate)
   val subsName = "A-S123"
 
   val validSubscription: Subscription = new Subscription(
@@ -65,9 +65,11 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   override lazy val subscriptionService = new SubscriptionService {
 
-    def checkSubscriptionValidity(subscription: Subscription, postcode: String) = Future {subscription.name.get.startsWith("A-S")}
+    def checkSubscriptionValidity(subscription: Subscription, postcode: String) =
+      Future.successful(subscription.name.get.startsWith("A-S"))
 
-    def getSubscription(name: String): Future[Option[Subscription]] = Future {Some(validSubscription)}
+    def getSubscription(name: String): Future[Option[Subscription]] =
+      Future.successful(Some(validSubscription))
 
     override def updateActivationDate(subscription: Subscription): Unit = ()
 
@@ -93,7 +95,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   "for the /subs endpoint" - {
     "when a valid request is made" - {
       "with a Zuora-formatted subscriber id" - {
-        "returns the expiration with one day leeway" in {
+        "returns the expiration with zero day leeway" in {
           val payload = SubscriptionRequest(Some(subsName), "password").toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 
@@ -105,7 +107,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
       "when an Invalid request is made" - {
         "with a Zuora-formatted subscriber id" - {
-          "returns the expiration" in {
+          "Returns a 404" in {
             val payload = SubscriptionRequest(Some("A-S-invalid"), "password").toJson.toString()
             val req = HttpEntity(`application/json`, payload)
 
