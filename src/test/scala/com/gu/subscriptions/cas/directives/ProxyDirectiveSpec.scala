@@ -3,7 +3,8 @@ package com.gu.subscriptions.cas.directives
 import akka.testkit.TestProbe
 import com.gu.i18n.GBP
 import com.gu.memsub.Subscription
-import com.gu.memsub.Subscription.{ProductRatePlanId, Name}
+import com.gu.memsub.Subscription.{Name, ProductRatePlanId}
+import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
@@ -40,7 +41,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   val now = new DateTime()
   val termEndDate = now.plusYears(1)
-  val expiration = SubscriptionExpiration(termEndDate)
+  val expiration = SubscriptionExpiration(termEndDate.plusDays(1))
   val subsName = "A-S123"
 
   val validSubscription: Subscription = new Subscription(
@@ -95,7 +96,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   "for the /subs endpoint" - {
     "when a valid request is made" - {
       "with a Zuora-formatted subscriber id" - {
-        "returns the expiration with zero day leeway" in {
+        "returns the expiration with one day leeway" in {
           val payload = SubscriptionRequest(Some(subsName), "password").toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 
