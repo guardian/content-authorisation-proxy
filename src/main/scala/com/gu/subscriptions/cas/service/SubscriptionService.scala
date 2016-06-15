@@ -5,6 +5,7 @@ import com.gu.memsub.{Digipack, Subscription}
 import com.gu.memsub.Subscription.Name
 import com.gu.memsub.services.CatalogService
 import com.gu.memsub.services.api.{SubscriptionService => CommonSubscriptionService}
+import com.gu.subscriptions.DigipackCatalog
 import com.gu.subscriptions.cas.config.Configuration.productFamily
 import com.gu.subscriptions.cas.config.Zuora._
 import com.gu.subscriptions.cas.model.ContactOps.WithMatchingPassword
@@ -14,7 +15,7 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SubscriptionService(zuoraService: ZuoraService, commonSubscriptionService: CommonSubscriptionService, catalogService: CatalogService) extends api.SubscriptionService with LazyLogging  {
+class SubscriptionService(zuoraService: ZuoraService, commonSubscriptionService: CommonSubscriptionService[DigipackCatalog], catalogService: CatalogService) extends api.SubscriptionService with LazyLogging  {
   def getValidSubscription(subscriptionName: Name, password: String): Future[Option[Subscription]] = {
     def checkSubscriptionValidity(subscription: Subscription): Future[Boolean] = {
       val postcodeCheck =

@@ -28,6 +28,7 @@ import scala.concurrent.duration._
 
 
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
+
   implicit val actorSystem: ActorSystem
   implicit val timeout: Timeout = 3.seconds
   def subscriptionService: SubscriptionService
@@ -89,10 +90,9 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     onSuccess(validSubscription) {
       case Some(subscription) =>
         if (activation) { subscriptionService.updateActivationDate(subscription) }
-        //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
-        complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay()))
+        complete(SubscriptionExpiration(subscription.termEndDate.toDateTimeAtStartOfDay()))
       case _ =>
-        notFound
+        reject
     }
   }
 
