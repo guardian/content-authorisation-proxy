@@ -17,7 +17,7 @@ import com.typesafe.scalalogging.LazyLogging
 import spray.can.Http
 import spray.can.Http.HostConnectorSetup
 import spray.http.HttpHeaders._
-import spray.http.{HttpRequest, HttpResponse, Uri}
+import spray.http.{HttpHeader, HttpRequest, HttpResponse, Uri}
 import spray.httpx.ResponseTransformation._
 import spray.httpx.SprayJsonSupport._
 import spray.routing.{Directives, Route}
@@ -53,6 +53,10 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       headers = in.headers.map {
         case Host(_, _) => Host(proxyHost)
         case header => header
+      }.filter {
+        case `Content-Type`(_) => false
+        case `Content-Length`(_) => false
+        case _ => true
       }
     )
   }
