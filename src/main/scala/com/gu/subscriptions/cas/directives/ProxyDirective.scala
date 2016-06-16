@@ -17,7 +17,7 @@ import com.typesafe.scalalogging.LazyLogging
 import spray.can.Http
 import spray.can.Http.HostConnectorSetup
 import spray.http.HttpHeaders._
-import spray.http.{HttpRequest, HttpResponse, Uri}
+import spray.http.{HttpHeader, HttpRequest, HttpResponse, Uri}
 import spray.httpx.ResponseTransformation._
 import spray.httpx.SprayJsonSupport._
 import spray.routing.{Directives, Route}
@@ -53,6 +53,10 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       headers = in.headers.map {
         case Host(_, _) => Host(proxyHost)
         case header => header
+      }.filter {
+        case `Content-Type`(_) => false
+        case `Content-Length`(_) => false
+        case _ => true
       }
     )
   }
@@ -61,11 +65,18 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     val proxyUri = Uri(proxy)
     val request = createProxyRequest(in, proxyUri)
     val hostConnectorSetup = connectorFromUrl(proxyUri)
-    (io ?(request, hostConnectorSetup)).mapTo[HttpResponse].map(
+    val out = (io ?(request, hostConnectorSetup)).mapTo[HttpResponse].map(
       logProxyResp(metrics) ~>
         filterHeaders ~>
         changeResponseCode
     )
+    out.onFailure {
+      case t: Throwable =>
+        logger.error(s"${t.getMessage} asking CAS about a subscription")
+        throw t
+    }
+
+    out
   }
 
   def logProxyResp(metrics: CASMetrics): HttpResponse => HttpResponse = { resp =>
@@ -87,6 +98,13 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { (activation, subscriptionName) =>
     val validSubscription = subscriptionService.getValidSubscription(subscriptionName, subsReq.password)
+
+    validSubscription.onFailure {
+      case t: Throwable =>
+        logger.error(s"Failed getting Zuora subscription ${t.getMessage} ${subsReq.subscriberId}")
+        throw t
+    }
+
     onSuccess(validSubscription) {
       case Some(subscription) =>
         if (activation) { subscriptionService.updateActivationDate(subscription) }
