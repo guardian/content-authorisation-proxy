@@ -14,6 +14,7 @@ import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionReque
 import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
 import spray.can.Http
 import spray.can.Http.HostConnectorSetup
 import spray.http.HttpHeaders._
@@ -116,9 +117,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   }
 
   val subsRoute = (path("subs") & post) {
-    entity(as[SubscriptionRequest]) { subsReq =>
-      zuoraRoute(subsReq) ~ casRoute
-    } ~ badRequest
+    complete(SubscriptionExpiration(DateTime.now().plusDays(2)))
   }
 }
 
