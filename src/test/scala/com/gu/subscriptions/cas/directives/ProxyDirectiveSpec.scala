@@ -13,7 +13,7 @@ import org.scalatest.FreeSpec
 import spray.http.HttpHeaders._
 import spray.http.MediaTypes.`application/json`
 import spray.http.StatusCodes.BadRequest
-import spray.http._
+import spray.http.{HttpEntity, _}
 import spray.json._
 import spray.routing.{HttpService, Route}
 import spray.testkit.ScalatestRouteTest
@@ -119,6 +119,15 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
         }
       }
       "without a Zuora format" - {
+
+        "Drops leading zeroes before querying Zuora" in {
+          val payload = SubscriptionRequest(Some("00" + subsName), "password").toJson.toString()
+          val req = HttpEntity(`application/json`, payload)
+          Post("/subs", req) ~> inJson(subsRoute) ~> check {
+            assertResult(expiration.toJson)(responseAs[String].parseJson)
+          }
+        }
+
         "proxies the request to CAS" in {
           val payload = SubscriptionRequest(Some("id"), "password").toJson.toString()
           val req = HttpEntity(`application/json`, payload)

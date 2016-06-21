@@ -5,6 +5,7 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.amazonaws.regions.{Region, Regions}
+import com.gu.memsub.Subscription.Name
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider.provider
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
@@ -97,7 +98,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   val authRoute: Route = (path("auth") & post)(casRoute)
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { (activation, subscriptionName) =>
-    val validSubscription = subscriptionService.getValidSubscription(subscriptionName, subsReq.password)
+    val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.dropWhile(_ == '0')), subsReq.password)
 
     validSubscription.onFailure {
       case t: Throwable =>
