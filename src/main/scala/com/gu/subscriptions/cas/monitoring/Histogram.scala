@@ -29,7 +29,7 @@ class Histogram(name: String = UUID.randomUUID().toString, expire: Int = 1, dura
 
   val actorSystem = ActorSystem(s"histogram-logger-$name")
 
-  actorSystem.scheduler.schedule(0.seconds, 10.seconds) {
+  actorSystem.scheduler.schedule(0.seconds, 1.hour) {
     logger.info(s"""Report:
 Top-50 requested IDs for $name at: ${LocalDateTime.now()}
 - ${getTop(50).map(e => s"${e._1}: ${e._2}").mkString("\n- ")}
