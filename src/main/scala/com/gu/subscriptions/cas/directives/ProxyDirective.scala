@@ -12,7 +12,7 @@ import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
-import com.gu.subscriptions.cas.monitoring.{RequestMetrics, StatusMetrics}
+import com.gu.subscriptions.cas.monitoring.{Histogram, RequestMetrics, StatusMetrics}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
 import spray.can.Http
@@ -97,6 +97,9 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   val authRoute: Route = (path("auth") & post)(casRoute)
 
+  val subsRouteHistogram = new Histogram("subsRoute", 1, DAYS)
+  val zuoraRouteHistogram = new Histogram("zuoraRouteFound", 1, DAYS)
+
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { (activation, subscriptionName) =>
     val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.dropWhile(_ == '0')), subsReq.password)
 
@@ -109,6 +112,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     onSuccess(validSubscription) {
       case Some(subscription) =>
         if (activation) { subscriptionService.updateActivationDate(subscription) }
+        subsReq.subscriberId.foreach(zuoraRouteHistogram.count) // requested ID, not Subscription.Name
         //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
         complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay()))
       case _ if subscriptionName.get.startsWith("A-S") => notFound //no point going to CAS if this is a Zuora sub
@@ -118,6 +122,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   val subsRoute = (path("subs") & post) {
     entity(as[SubscriptionRequest]) { subsReq =>
+      subsReq.subscriberId.foreach(subsRouteHistogram.count)
       zuoraRoute(subsReq) ~ casRoute
     } ~ badRequest
   }
