@@ -18,6 +18,7 @@ import scala.util.Random
   * This class representes a histogram or frequency-map of strings. It is up to the callee to call count with a string.
   * The getTop method can be called to see the existing values in the cache. There is thus a reporting maximimum of Integer.MAX.
   * The class will log to the attached logger, a count of the top 50 requested strings every hour. Hence it requires an implicit ActorSystem.
+  *
   * @param name the name of this histogram, default: a UUID
   * @param expire the duration to expire the histogram entries. Default: 1
   * @param duration the time unit to expire the histogram entries. Default: HOURS
@@ -30,10 +31,11 @@ class Histogram(name: String = UUID.randomUUID().toString, expire: Int = 1, dura
   val actorSystem = ActorSystem(s"histogram-logger-$name")
 
   actorSystem.scheduler.schedule(0.seconds, 1.hour) {
-    logger.info(s"""Report:
-Top-50 requested IDs for $name at: ${LocalDateTime.now()}
+    logger.info(s"""`$name` cache stats:
+${countCache.size} entries.
+Top-50 requested IDs:
 - ${getTop(50).map(e => s"${e._1}: ${e._2}").mkString("\n- ")}
-End of Top-50 report for $name""")
+End of report for `$name`""")
   }
 
   def count(key: String) =
@@ -43,6 +45,6 @@ End of Top-50 report for $name""")
       countCache.put(key, counter)
     } { _.increment() }
 
-  def getTop(amount: Int) = countCache.asMap().toSeq.filter(_._2.longValue() > 1).sortBy(_._2.longValue()).reverse.take(amount)
+  def getTop(amount: Int) = countCache.asMap().toStream.filter(_._2.longValue() > 3).sortBy(_._2.longValue()).reverse.take(amount)
 
 }
