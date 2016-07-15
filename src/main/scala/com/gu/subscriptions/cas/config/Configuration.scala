@@ -1,7 +1,7 @@
 package com.gu.subscriptions.cas.config
 
 import akka.actor.ActorSystem
-import com.gu.config.{MembershipRatePlanIds, DigitalPackRatePlanIds}
+import com.gu.config.{DigitalPackRatePlanIds, MembershipRatePlanIds, SubscriptionsProductIds}
 import com.gu.memsub.Digipack
 import com.typesafe.config.ConfigFactory
 
@@ -28,5 +28,6 @@ object Configuration {
 
   val digipackPlans = DigitalPackRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.digitalpack"))
   val membershipPlans = MembershipRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.membership"))
+  val subsIds = SubscriptionsProductIds(touchpointConfig.getConfig("zuora.productIds.paper"))
   implicit val productFamily = Digipack
 }
