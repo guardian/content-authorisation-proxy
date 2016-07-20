@@ -4,9 +4,8 @@ import akka.testkit.TestProbe
 import com.gu.i18n.GBP
 import com.gu.memsub.Subscription
 import com.gu.memsub.Subscription.{Name, ProductRatePlanId}
-import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-import com.gu.subscriptions.cas.model.{SubscriptionExpiration, SubscriptionRequest}
+import com.gu.subscriptions.cas.model.{ExpiryType, SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
@@ -41,7 +40,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   val now = new DateTime()
   val termEndDate = now.plusYears(1)
-  val expiration = SubscriptionExpiration(termEndDate.plusDays(1))
+  val expiration = SubscriptionExpiration(termEndDate.plusDays(1), ExpiryType.SUB)
   val subsName = "A-S123"
 
   val validSubscription: Subscription = new Subscription(
@@ -97,7 +96,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     "when a valid request is made" - {
       "with a Zuora-formatted subscriber id" - {
         "returns the expiration with one day leeway" in {
-          val payload = SubscriptionRequest(Some(subsName), "password").toJson.toString()
+          val payload = SubscriptionRequest(Some(subsName), Some("password")).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
@@ -109,7 +108,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       "when an Invalid request is made" - {
         "with a Zuora-formatted subscriber id" - {
           "Returns a 404" in {
-            val payload = SubscriptionRequest(Some("A-S-invalid"), "password").toJson.toString()
+            val payload = SubscriptionRequest(Some("A-S-invalid"), Some("password")).toJson.toString()
             val req = HttpEntity(`application/json`, payload)
 
             Post("/subs", req) ~> inJson(subsRoute) ~> check {
@@ -121,7 +120,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       "without a Zuora format" - {
 
         "Drops leading zeroes before querying Zuora" in {
-          val payload = SubscriptionRequest(Some("00" + subsName), "password").toJson.toString()
+          val payload = SubscriptionRequest(Some("00" + subsName), Some("password")).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
             assertResult(expiration.toJson)(responseAs[String].parseJson)
@@ -129,7 +128,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
         }
 
         "proxies the request to CAS" in {
-          val payload = SubscriptionRequest(Some("id"), "password").toJson.toString()
+          val payload = SubscriptionRequest(Some("id"), Some("password")).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
