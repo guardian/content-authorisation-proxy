@@ -4,7 +4,7 @@ organization  := "com.gu"
 
 version       := "0.1"
 
-scalaVersion  := "2.11.6"
+scalaVersion  := "2.11.7"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
@@ -33,7 +33,7 @@ libraryDependencies ++= {
     "net.kencochrane.raven" % "raven-logback" % "6.0.0",
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
     "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.10.50",
-    "com.gu" %% "membership-common" % "0.218",
+    "com.gu" %% "membership-common" % "0.242",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   )
 }

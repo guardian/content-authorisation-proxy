@@ -8,6 +8,9 @@ import spray.routing.{HttpService, Route}
 
 trait HealthCheckDirective extends LazyLogging with ErrorRoute {this: HttpService =>
   def subscriptionService: SubscriptionService
+
+  val completeResponse = s"""{ "status": "ok" , "gitCommitId": "${app.BuildInfo.gitCommitId}" }"""
+
   val healthCheck: Route =
     (get & path("healthcheck") & respondWithMediaType(`application/json`)) {
       // Make sure that the inner route gets reevaluated each time, as the Zuora service availability changes
@@ -21,7 +24,7 @@ trait HealthCheckDirective extends LazyLogging with ErrorRoute {this: HttpServic
             logger.warn("Service not ready yet")
             serviceUnavailableError
           } else {
-            complete(s"""{ "status": "ok" , "gitCommitId": "${app.BuildInfo.gitCommitId}" }""")
+            complete(completeResponse)
           }
 
         }
