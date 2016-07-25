@@ -5,7 +5,7 @@ import com.gu.i18n.GBP
 import com.gu.memsub.Subscription
 import com.gu.memsub.Subscription.{Name, ProductRatePlanId}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-import com.gu.subscriptions.cas.model.{ExpiryType, SubscriptionExpiration, SubscriptionRequest}
+import com.gu.subscriptions.cas.model.{ExpiryType, Expiry, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
@@ -40,7 +40,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   val now = new DateTime()
   val termEndDate = now.plusYears(1)
-  val expiration = SubscriptionExpiration(termEndDate.plusDays(1), ExpiryType.SUB)
+  val expiration = Expiry(termEndDate.plusDays(1).toString, ExpiryType.SUB)
   val subsName = "A-S123"
 
   val validSubscription: Subscription = new Subscription(

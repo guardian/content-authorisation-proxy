@@ -1,14 +1,14 @@
 package com.gu.subscriptions.cas.directives
 
 import com.gu.subscriptions.cas.config.Configuration.{system, _}
+import com.gu.subscriptions.cas.model.{AuthorisationError, AuthorisationResponse}
 import spray.http.{HttpResponse, StatusCodes}
-import spray.json.{JsObject, JsString, JsNumber}
+import spray.json.{JsNumber, JsObject, JsString}
 import spray.routing.Route
 import spray.routing.directives.RouteDirectives.complete
 
 trait ErrorRoute {
-  def errorMsg(msg: String, code: Int): String =
-    JsObject("error" -> JsObject("message" -> JsString(msg), "code" -> JsNumber(code))).toString()
+  def errorMsg(msg: String, code: Int): AuthorisationResponse = AuthorisationResponse(None, Some(AuthorisationError(msg, code)))
 
   val badRequest: Route =
     complete(

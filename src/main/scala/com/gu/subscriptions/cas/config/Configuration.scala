@@ -1,6 +1,10 @@
 package com.gu.subscriptions.cas.config
 
 import akka.actor.ActorSystem
+import com.amazonaws.auth.{AWSCredentialsProviderChain, InstanceProfileCredentialsProvider}
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.regions.Regions
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.gu.config.{DigitalPackRatePlanIds, MembershipRatePlanIds, SubscriptionsProductIds}
 import com.gu.memsub.Digipack
 import com.typesafe.config.ConfigFactory
@@ -42,6 +46,18 @@ object Configuration {
   val subscriptionDisabledErrorCode = appConfig.getInt("subscription.disabled.error.code")
   val authFreeperiodAlreadyset = appConfig.getInt("auth.freeperiod.alreadyset")
   val authFreeperiodTofarinthefuture = appConfig.getInt("auth.freeperiod.tofarinthefuture")
+
+  private object AWS {
+    val profile = appConfig.getString("aws-profile")
+    val credentialsProvider = new AWSCredentialsProviderChain(new ProfileCredentialsProvider(profile), new InstanceProfileCredentialsProvider())
+    val region = Regions.EU_WEST_1
+  }
+
+  lazy val dynamoClient = {
+    val awsDynamoClient = new AmazonDynamoDBAsyncClient(AWS.credentialsProvider)
+    awsDynamoClient.configureRegion(AWS.region)
+    awsDynamoClient
+  }
 
   implicit val productFamily = Digipack
 }

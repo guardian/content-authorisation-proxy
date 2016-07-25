@@ -12,8 +12,9 @@ import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider.
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-import com.gu.subscriptions.cas.model.{AuthorisationRequest, ExpiryType, SubscriptionExpiration, SubscriptionRequest}
+import com.gu.subscriptions.cas.model._
 import com.gu.subscriptions.cas.monitoring.{Histogram, RequestMetrics, StatusMetrics}
+import com.gu.subscriptions.cas.service.SubscriptionPersistenceService
 import com.gu.subscriptions.cas.service.api.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
 import spray.can.Http
@@ -27,7 +28,6 @@ import spray.routing.{Directives, Route}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
 
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
@@ -115,25 +115,29 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       // if we have an app id and a device id, then lookup record in dynamo
         // if no record exists:
           // if there is an expiry date provided by the device which is < 1 year
-            // upsert and return a new FREE, DEVICE_CONFIGURED Expiry object
+            // upsert and return an AuthorisationResponse containing an Expiry(FREE, DEVICE_CONFIGURED, deviceDate) object
           // if there is no expiry date provided by the device
-            // upsert and return a new FREE, DEFAULT Expiry object, with a 2-week Expiry date.
+            // upsert and return an AuthorisationResponse containing Expiry(FREE, DEFAULT, 2-week-ahead-date).
         // if record exists
           // if expiry date is not set in request
-            // return the dynamo record verbatim
-          // if there is expiry date is in request
-            // if dynamo record has the DEVICE_CONFIGURED provider
+            // return an AuthorisationResponse with an Expiry verbatim from the dynamo record)
+          // if there is expiry date is in request --- SHOULD WE DO THIS STILL?
+            // if dynamo record's Expiry has the DEVICE_CONFIGURED provider
               // if the expiry dates match
-                // return the Expiry record.
-              // if the expiry dates dont' match
-                // return error: "Expiry date for free period has already been set by this device", code "auth.freeperiod.alreadyset"
-            // if dynamo record does not have DEVICE_CONFIGURED provider
-              // upsert and return the dynamo response with DEVICE_CONFIGURED and the request expiry date, maintaining the expiryType.
+                // return an AuthorisationResponse with an Expiry verbatim from the dynamo record)
+              // if the expiry dates don't match
+                // return an AuthorisationResponse with Error: "Expiry date for free period has already been set by this device", code "auth.freeperiod.alreadyset"
+            // if dynamo record's Expiry does *not* have DEVICE_CONFIGURED provider
+              // create a ContentAuthorisation with Expiry(maintaining the expiryType, DEVICE_CONFIGURED, requestExpiry), upsert it and return an AuthorisationResponse
       // if no app id and device id
-        // return error: "Mandatory data missing from request"
+        // return an AuthorisationResponse with error: "Mandatory data missing from request" and code "mandatory.data.missing.error.code"
+    // }
   }
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { (activation, subscriptionName) =>
+
+    persistenceService.countInstallations(Credentials(subscriptionName, subsReq.password).get)
+
     val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.trim.dropWhile(_ == '0')), subsReq.password.getOrElse(""))
 
     validSubscription.onFailure {
@@ -148,7 +152,12 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
         // TODO ASAP - if deviceId and appId are provided:
           // upsert a record in DynamoDB
         //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
-        complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay(), ExpiryType.SUB))
+        val zuoraExpiry = Expiry(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay().toString, ExpiryType.SUB)
+        val response = AuthorisationResponse(Some(zuoraExpiry))
+        if (subsReq.hasValidAuth) {
+          persistenceService.set(ContentAuthorisation(subsReq.appId.mkString, subsReq.deviceId.mkString, zuoraExpiry))
+        }
+        complete(response)
       case _ if subscriptionName.get.startsWith("A-S") =>
         //no point going to CAS if this is a Zuora sub
         notFound

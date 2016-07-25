@@ -1,7 +1,7 @@
 package com.gu.subscriptions.cas.model.json
 
 import com.gu.subscriptions.CAS.CASError
-import com.gu.subscriptions.cas.model.{SubscriptionExpiration, ExpiryType}
+import com.gu.subscriptions.cas.model.{Expiry, ExpiryType}
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
 import spray.json._
@@ -26,8 +26,8 @@ class ModelJsonProtocolSpec extends FreeSpec {
 
   "For SubscriptionExpiration" - {
     "handles serialization" in {
-      val expiration = SubscriptionExpiration(
-        expiryDate = new DateTime(2015, 5, 21, 12, 0),
+      val expiration = Expiry(
+        expiryDate = new DateTime(2015, 5, 21, 12, 0).toString,
         expiryType = ExpiryType.SUB
       )
 

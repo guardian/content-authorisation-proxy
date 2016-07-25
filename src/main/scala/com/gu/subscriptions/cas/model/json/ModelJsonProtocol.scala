@@ -1,24 +1,19 @@
 package com.gu.subscriptions.cas.model.json
 
 import com.gu.subscriptions.CAS.CASError
-import com.gu.subscriptions.cas.model.{AuthorisationRequest, SubscriptionExpiration, SubscriptionRequest}
+import com.gu.subscriptions.cas.model.{AuthorisationRequest, AuthorisationResponse, ContentAuthorisation, Expiry, SubscriptionRequest}
 import spray.json._
 
 object ModelJsonProtocol extends DefaultJsonProtocol {
-  implicit object SubscriptionExpirationProtocol extends RootJsonWriter[SubscriptionExpiration] {
-    override def write(sub: SubscriptionExpiration): JsValue = JsObject(
-      "expiry" -> JsObject(
-        "expiryType" -> JsString(sub.expiryType),
-        "expiryDate" -> JsString(sub.expiryDate.toString("YYYY-MM-dd")),
-        "content" -> JsString(sub.content)
-    ))
-  }
 
-  implicit val subsRequestFormat = jsonFormat2(SubscriptionRequest)
   implicit val authRequestFormat = jsonFormat3(AuthorisationRequest)
+  implicit val subsRequestFormat = jsonFormat5(SubscriptionRequest)
 
   case class CASErrorWrapper(error: CASError)
-
   implicit val casErrorFormat = jsonFormat2(CASError)
   implicit val casErrorWrapperFormat = jsonFormat1(CASErrorWrapper)
+  implicit val expiryFormat = jsonFormat3(Expiry)
+  implicit val authorisationResponseWrapperFormat = jsonFormat2(AuthorisationResponse)
+  implicit val contentAuthorisationWrapperFormat = jsonFormat4(ContentAuthorisation)
+
 }
