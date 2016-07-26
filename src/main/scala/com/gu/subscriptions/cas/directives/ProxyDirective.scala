@@ -99,11 +99,19 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     }
   }
 
+  lazy val authRouteWithSubIdHistogram = new Histogram("authRouteWithSubId", 1, DAYS) // clients should not be doing this
+  lazy val authRouteWithAuthTypeHistogram = new Histogram("authRouteWithAuthType", 1, DAYS) // clients should not be doing this either
+
   val authRoute: Route = (path("auth") & post) {
-    casRoute
+    entity(as[SubscriptionRequest]) { subsReq =>
+      subsReq.subscriberId.foreach(authRouteWithSubIdHistogram.count)
+      subsReq.authType.foreach(authRouteWithAuthTypeHistogram.count)
+      reject
+    } ~ {
+      casRoute
+    }
 
     // TODO second - stop this cascading to casRoute. Algorithm is below.
-    // entity(as[SubscriptionRequest]) { subsReq =>
       // if we have an app id and a device id, then lookup record in dynamo
         // if no record exists:
           // if there is an expiry date provided by the device which is < 1 year
@@ -123,21 +131,13 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
               // upsert and return the dynamo response with DEVICE_CONFIGURED and the request expiry date, maintaining the expiryType.
       // if no app id and device id
         // return error: "Mandatory data missing from request"
-    // }
   }
-
-  val subsRouteHistogram = new Histogram("subsRoute", 1, DAYS)
-  val zuoraRouteFoundHistogram = new Histogram("zuoraRouteFound", 1, DAYS)
-  val zuoraRouteNotFoundHistogram = new Histogram("zuoraRouteNotFound", 1, DAYS)
-  val zuoraRouteThenAuth = new Histogram("zuoraRouteThenAuth", 1, DAYS)
-  val zuoraRouteErrorHistogram = new Histogram("zuoraRouteError", 1, DAYS)
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { (activation, subscriptionName) =>
     val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.trim.dropWhile(_ == '0')), subsReq.password.getOrElse(""))
 
     validSubscription.onFailure {
       case t: Throwable =>
-        subsReq.subscriberId.foreach(zuoraRouteErrorHistogram.count)
         logger.error(s"Failed getting Zuora subscription ${t.getMessage} ${subsReq.subscriberId}")
         throw t
     }
@@ -145,18 +145,15 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     onSuccess(validSubscription) {
       case Some(subscription: Subscription) =>
         if (activation) { subscriptionService.updateActivationDate(subscription) }
-        subsReq.subscriberId.foreach (zuoraRouteFoundHistogram.count)
         // TODO ASAP - if deviceId and appId are provided:
           // upsert a record in DynamoDB
         //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
         complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay(), ExpiryType.SUB))
       case _ if subscriptionName.get.startsWith("A-S") =>
         //no point going to CAS if this is a Zuora sub
-        subsReq.subscriberId.foreach(zuoraRouteNotFoundHistogram.count)
         notFound
       case _ =>
-        //Go to CAS legacy
-        subsReq.subscriberId.foreach(zuoraRouteThenAuth.count)
+        //Go to CAS legacy /subs route
         reject
     }
   }
@@ -167,7 +164,6 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
         // get count of activations for these credentials from Dynamo
         // if count >= "max.subscriptions.per.user" return error: "Credentials used too often", credentials.overuse.error.code
         // else, continue, the zuoraRoute must update the count iff successful
-      subsReq.subscriberId.foreach(subsRouteHistogram.count)
       zuoraRoute(subsReq) ~ casRoute
     } ~ badRequest
   }

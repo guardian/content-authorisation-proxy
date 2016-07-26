@@ -1,6 +1,5 @@
 package com.gu.subscriptions.cas.monitoring
 
-import java.time.LocalDateTime
 import java.util.UUID
 
 import com.google.common.cache.CacheBuilder
@@ -9,10 +8,9 @@ import java.util.concurrent.atomic.LongAdder
 import akka.actor.ActorSystem
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConversions._
+import collection.JavaConversions.mapAsScalaMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.util.Random
 
 /**
   * This class representes a histogram or frequency-map of strings. It is up to the callee to call count with a string.
@@ -39,12 +37,16 @@ End of report for `$name`""")
   }
 
   def count(key: String) =
-    Option(countCache.getIfPresent(key)).fold {
-      val counter = new LongAdder
-      counter.increment()
-      countCache.put(key, counter)
-    } { _.increment() }
+    if (!key.isEmpty) {
+      Option(countCache.getIfPresent(key)).fold {
+        val counter = new LongAdder
+        counter.increment()
+        countCache.put(key, counter)
+      } {
+        _.increment()
+      }
+    }
 
-  def getTop(amount: Int) = countCache.asMap().toStream.filter(_._2.longValue() > 3).sortBy(_._2.longValue()).reverse.take(amount)
+  def getTop(amount: Int) = countCache.asMap().filter(_._2.longValue() > 3).toSeq.sortBy(_._2.longValue()).reverse.take(amount)
 
 }
