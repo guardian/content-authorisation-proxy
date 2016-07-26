@@ -14,7 +14,7 @@ object ModelJsonProtocol extends DefaultJsonProtocol {
     ))
   }
 
-  implicit val subsRequestFormat = jsonFormat2(SubscriptionRequest)
+  implicit val subsRequestFormat = jsonFormat3(SubscriptionRequest)
 
   case class CASErrorWrapper(error: CASError)
 
