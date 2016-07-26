@@ -96,7 +96,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     "when a valid request is made" - {
       "with a Zuora-formatted subscriber id" - {
         "returns the expiration with one day leeway" in {
-          val payload = SubscriptionRequest(Some(subsName), Some("password")).toJson.toString()
+          val payload = SubscriptionRequest(Some(subsName), Some("password"), None).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
@@ -108,7 +108,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       "when an Invalid request is made" - {
         "with a Zuora-formatted subscriber id" - {
           "Returns a 404" in {
-            val payload = SubscriptionRequest(Some("A-S-invalid"), Some("password")).toJson.toString()
+            val payload = SubscriptionRequest(Some("A-S-invalid"), Some("password"), None).toJson.toString()
             val req = HttpEntity(`application/json`, payload)
 
             Post("/subs", req) ~> inJson(subsRoute) ~> check {
@@ -120,7 +120,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       "without a Zuora format" - {
 
         "Drops leading zeroes before querying Zuora" in {
-          val payload = SubscriptionRequest(Some("00" + subsName), Some("password")).toJson.toString()
+          val payload = SubscriptionRequest(Some("00" + subsName), Some("password"), None).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
             assertResult(expiration.toJson)(responseAs[String].parseJson)
@@ -128,7 +128,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
         }
 
         "proxies the request to CAS" in {
-          val payload = SubscriptionRequest(Some("id"), Some("password")).toJson.toString()
+          val payload = SubscriptionRequest(Some("id"), Some("password"), None).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
