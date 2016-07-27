@@ -12,7 +12,7 @@ import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider.
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-import com.gu.subscriptions.cas.model.{SubscriptionExpiration, ExpiryType, SubscriptionRequest}
+import com.gu.subscriptions.cas.model.{AuthorisationRequest, ExpiryType, SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.monitoring.{Histogram, RequestMetrics, StatusMetrics}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
@@ -99,13 +99,13 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     }
   }
 
-  lazy val authRouteWithSubIdHistogram = new Histogram("authRouteWithSubId", 1, DAYS) // clients should not be doing this
-  lazy val authRouteWithAuthTypeHistogram = new Histogram("authRouteWithAuthType", 1, DAYS) // clients should not be doing this either
+  val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
+  val authRouteExpiryDateHistogram = new Histogram("authRouteExpiryDate", 1, DAYS) // what variance of dates?
 
   val authRoute: Route = (path("auth") & post) {
-    entity(as[SubscriptionRequest]) { subsReq =>
-      subsReq.subscriberId.foreach(authRouteWithSubIdHistogram.count)
-      subsReq.authType.foreach(authRouteWithAuthTypeHistogram.count)
+    entity(as[AuthorisationRequest]) { subsReq =>
+      subsReq.appId.foreach(authRouteAppIdHistogram.count)
+      subsReq.expiryDate.foreach(authRouteExpiryDateHistogram.count)
       reject
     } ~ {
       casRoute

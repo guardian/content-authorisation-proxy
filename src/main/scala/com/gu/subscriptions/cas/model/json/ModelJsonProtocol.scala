@@ -1,7 +1,7 @@
 package com.gu.subscriptions.cas.model.json
 
 import com.gu.subscriptions.CAS.CASError
-import com.gu.subscriptions.cas.model.{SubscriptionRequest, SubscriptionExpiration}
+import com.gu.subscriptions.cas.model.{AuthorisationRequest, SubscriptionExpiration, SubscriptionRequest}
 import spray.json._
 
 object ModelJsonProtocol extends DefaultJsonProtocol {
@@ -14,7 +14,8 @@ object ModelJsonProtocol extends DefaultJsonProtocol {
     ))
   }
 
-  implicit val subsRequestFormat = jsonFormat3(SubscriptionRequest)
+  implicit val subsRequestFormat = jsonFormat2(SubscriptionRequest)
+  implicit val authRequestFormat = jsonFormat3(AuthorisationRequest)
 
   case class CASErrorWrapper(error: CASError)
 
