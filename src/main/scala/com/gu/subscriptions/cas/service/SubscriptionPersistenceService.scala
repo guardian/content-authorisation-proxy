@@ -1,34 +1,33 @@
 package com.gu.subscriptions.cas.service
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
-import com.amazonaws.services.dynamodbv2.model.{PutItemResult, QueryResult, ScanResult}
-import com.gu.scanamo.{Index, ScanamoAsync, Table}
-import com.gu.subscriptions.cas.model.{ContentAuthorisation, Expiry}
-import com.typesafe.scalalogging.LazyLogging
+import com.amazonaws.services.dynamodbv2.model.PutItemResult
 import com.gu.scanamo.syntax._
-import com.gu.scanamo.Index._
+import com.gu.scanamo.{ScanamoAsync, Table}
 import com.gu.subscriptions.cas.config.Configuration.dynamoClient
+import com.gu.subscriptions.cas.model.ContentAuthorisation
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Future
 
 trait SubscriptionPersistenceService {
-  def get(primaryKey: String): Future[Option[ContentAuthorisation]]
-  def set(data: ContentAuthorisation): Future[PutItemResult]
-  def countInstallations(credentialsHash: String): Future[Int]
+  def get(installationId: String): Future[Option[ContentAuthorisation]]
+  def set(contentAuthorisation: ContentAuthorisation): Future[PutItemResult]
+  def getAll(subscriberId: String): Future[List[ContentAuthorisation]]
 }
 
 class ScanamoCASService(client: AmazonDynamoDBAsyncClient, table: String) extends SubscriptionPersistenceService with LazyLogging {
   val scanamo = Table[ContentAuthorisation](table)
-  val index = scanamo.index("credentialsHash-index")
+  val index = scanamo.index("subscriberId-index")
 
   def run[T] = ScanamoAsync.exec[T](client) _
 
-  override def get(primaryKey: String) =
-    run(scanamo.get('installationId -> primaryKey).map(_.flatMap(_.toOption)))
+  override def get(installationId: String) =
+    run(scanamo.get('installationId -> installationId).map(_.flatMap(_.toOption)))
 
-  override def set(data: ContentAuthorisation) = run(scanamo.put(data))
+  override def set(contentAuthorisation: ContentAuthorisation) = run(scanamo.put(contentAuthorisation))
 
-  override def countInstallations(credentialsHash: String) = Future.successful(1)
+  override def getAll(subscriberId: String) = run(index.query('subscriberId -> subscriberId).map(_.flatMap(_.toOption)))
 }
 
 object SubscriptionPersistenceService {

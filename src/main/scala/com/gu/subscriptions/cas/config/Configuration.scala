@@ -34,6 +34,8 @@ object Configuration {
   val membershipPlans = MembershipRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.membership"))
   val subsIds = SubscriptionsProductIds(touchpointConfig.getConfig("zuora.productIds.subscriptions"))
 
+  val maxSubscriptionsPerUser = appConfig.getInt("max.subscriptions.per.user")
+
   val generalErrorCode = appConfig.getInt("general.error.code")
   val unhandledExceptionErrorCode = appConfig.getInt("unhandled.exception.error.code")
   val networkErrorCode = appConfig.getInt("network.error.code")

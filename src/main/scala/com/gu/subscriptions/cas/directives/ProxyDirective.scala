@@ -8,6 +8,7 @@ import com.amazonaws.regions.{Region, Regions}
 import com.gu.memsub.Subscription
 import com.gu.memsub.Subscription.Name
 import com.gu.subscriptions.cas.config.Configuration
+import com.gu.subscriptions.cas.config.Configuration.maxSubscriptionsPerUser
 import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider.provider
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
@@ -17,6 +18,7 @@ import com.gu.subscriptions.cas.monitoring.{Histogram, RequestMetrics, StatusMet
 import com.gu.subscriptions.cas.service.SubscriptionPersistenceService
 import com.gu.subscriptions.cas.service.api.SubscriptionService
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.LocalDate
 import spray.can.Http
 import spray.can.Http.HostConnectorSetup
 import spray.http.HttpHeaders._
@@ -28,12 +30,17 @@ import spray.routing.{Directives, Route}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   implicit val actorSystem: ActorSystem
   implicit val timeout: Timeout = 3.seconds
+
+  private val yesterday = LocalDate.now.minusDays(1)
+
   def subscriptionService: SubscriptionService
+  def persistenceService: SubscriptionPersistenceService
 
   lazy val io: ActorRef = IO(Http)
   val filterHeaders: HttpResponse => HttpResponse = resp =>
@@ -135,10 +142,9 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   }
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { (activation, subscriptionName) =>
+    val credentials = Credentials(subsReq.subscriberId, subsReq.password)
 
-    persistenceService.countInstallations(Credentials(subscriptionName, subsReq.password).get)
-
-    val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.trim.dropWhile(_ == '0')), subsReq.password.getOrElse(""))
+    val validSubscription = subscriptionService.getValidSubscription(Name(credentials.subscriberId.trim.dropWhile(_ == '0')), credentials.password)
 
     validSubscription.onFailure {
       case t: Throwable =>
@@ -149,31 +155,64 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     onSuccess(validSubscription) {
       case Some(subscription: Subscription) =>
         if (activation) { subscriptionService.updateActivationDate(subscription) }
-        // TODO ASAP - if deviceId and appId are provided:
-          // upsert a record in DynamoDB
         //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
         val zuoraExpiry = Expiry(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay().toString, ExpiryType.SUB)
         val response = AuthorisationResponse(Some(zuoraExpiry))
         if (subsReq.hasValidAuth) {
-          persistenceService.set(ContentAuthorisation(subsReq.appId.mkString, subsReq.deviceId.mkString, zuoraExpiry))
+          persistenceService.set(ContentAuthorisation(Installation(subsReq.appId, subsReq.deviceId).hash, zuoraExpiry, Some(credentials.hash)))
         }
         complete(response)
       case _ if subscriptionName.get.startsWith("A-S") =>
         //no point going to CAS if this is a Zuora sub
         notFound
       case _ =>
-        //Go to CAS legacy /subs route
+        //Go to CAS legacy's /subs route
         reject
+    }
+  }
+
+  def preZuoraRoute(subsReq: SubscriptionRequest): Route = {
+
+    if (subsReq.hasValidCredentials) {
+
+      val credentials = Credentials(subsReq.subscriberId, subsReq.password)
+
+      onComplete(persistenceService.getAll(credentials.subscriberId)) {
+
+        case Failure(t) =>
+          logger.error(s"Error $t in getting list of authorisations for ${credentials.subscriberId}")
+          throw t
+
+        case Success(activations) =>
+          // Optimization:
+          // if we also have 'auth' details in the subs request and a matching installation is found,
+          // and its expiry is in the future,
+          // then authorise just from the persistence layer to save a call through to Zuora
+          if (subsReq.hasValidAuth) {
+            val installation = Installation(subsReq.appId, subsReq.deviceId)
+            val found = activations.find(a => a.installationHash == installation.hash && a.credentialsHash.contains(credentials.hash))
+            if (found.isDefined) {
+              val notExpired = found.exists(a => LocalDate.parse(a.expiry.expiryDate).isAfter(yesterday))
+              if (notExpired) {
+                return complete(AuthorisationResponse(Some(found.get.expiry))) // TODO do I need return?
+              }
+            }
+          }
+          // Delegate to Zuora for authorisation iff the number of user activations is <= the limit
+          if (activations.size <= maxSubscriptionsPerUser) {
+            zuoraRoute(subsReq)
+          } else {
+            tooManyRegistrationsError
+          }
+      }
+    } else {
+      badRequest
     }
   }
 
   val subsRoute = (path("subs") & post) {
     entity(as[SubscriptionRequest]) { subsReq =>
-      // TODO third - handle limit of regisrations
-        // get count of activations for these credentials from Dynamo
-        // if count >= "max.subscriptions.per.user" return error: "Credentials used too often", credentials.overuse.error.code
-        // else, continue, the zuoraRoute must update the count iff successful
-      zuoraRoute(subsReq) ~ casRoute
+      preZuoraRoute(subsReq) ~ casRoute
     } ~ badRequest
   }
 }

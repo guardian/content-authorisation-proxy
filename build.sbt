@@ -36,7 +36,7 @@ libraryDependencies ++= {
     "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.10.50",
     "com.gu" %% "membership-common" % "0.242",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-    "com.gu" %% "scanamo" % "0.6.0",
+    "com.gu" %% "scanamo" % "0.7.0",
     "com.amazonaws" % "aws-java-sdk-dynamodb" % "1.10.62"
   )
 }

@@ -41,4 +41,12 @@ trait ErrorRoute {
         entity = errorMsg("Service Unavailable. Please try again later", networkErrorCode)
       )
     )
+
+  val tooManyRegistrationsError: Route =
+    complete(
+      HttpResponse(
+        status = StatusCodes.Forbidden,
+        entity = errorMsg("Credentials used too often", credentialsOverUseErrorCode)
+      )
+    )
 }
