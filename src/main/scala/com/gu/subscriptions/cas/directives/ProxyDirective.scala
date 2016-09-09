@@ -40,7 +40,8 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   private val yesterday = LocalDate.now.minusDays(1)
 
   def subscriptionService: SubscriptionService
-  def persistenceService: SubscriptionPersistenceService
+
+  lazy val persistenceService = SubscriptionPersistenceService.fromConfig
 
   lazy val io: ActorRef = IO(Http)
   val filterHeaders: HttpResponse => HttpResponse = resp =>
