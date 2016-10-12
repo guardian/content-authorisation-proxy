@@ -5,8 +5,9 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.amazonaws.regions.{Region, Regions}
-import com.gu.memsub.Subscription
 import com.gu.memsub.Subscription.Name
+import com.gu.memsub.subsv2.Subscription
+import com.gu.memsub.subsv2.SubscriptionPlan.Paid
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider.provider
 import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
@@ -143,7 +144,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     }
 
     onSuccess(validSubscription) {
-      case Some(subscription: Subscription) =>
+      case Some(subscription: Subscription[Paid]) =>
         if (activation) { subscriptionService.updateActivationDate(subscription) }
         // TODO ASAP - if deviceId and appId are provided:
           // upsert a record in DynamoDB
