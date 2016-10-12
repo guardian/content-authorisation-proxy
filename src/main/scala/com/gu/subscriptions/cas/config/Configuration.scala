@@ -1,7 +1,7 @@
 package com.gu.subscriptions.cas.config
 
 import akka.actor.ActorSystem
-import com.gu.config.{DigitalPackRatePlanIds, MembershipRatePlanIds, SubscriptionsProductIds}
+import com.gu.config.{DigitalPackRatePlanIds, MembershipRatePlanIds, SubsV2ProductIds, SubscriptionsProductIds}
 import com.gu.memsub.Digipack
 import com.typesafe.config.ConfigFactory
 
@@ -44,4 +44,10 @@ object Configuration {
   val authFreeperiodTofarinthefuture = appConfig.getInt("auth.freeperiod.tofarinthefuture")
 
   implicit val productFamily = Digipack
+
+  def productIds(env: String): com.gu.memsub.subsv2.reads.ChargeListReads.ProductIds =
+    SubsV2ProductIds(touchpointConfig.getConfig("zuora.productIds"))
+
+
+
 }

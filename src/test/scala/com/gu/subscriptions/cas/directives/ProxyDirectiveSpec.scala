@@ -2,8 +2,10 @@ package com.gu.subscriptions.cas.directives
 
 import akka.testkit.TestProbe
 import com.gu.i18n.GBP
-import com.gu.memsub.Subscription
-import com.gu.memsub.Subscription.{Name, ProductRatePlanId}
+import com.gu.memsub.Subscription.{Name, ProductRatePlanId, RatePlanId}
+import com.gu.memsub._
+import com.gu.memsub.subsv2.SubscriptionPlan.{Digipack, Paid, Paper}
+import com.gu.memsub.subsv2.{PaidCharge, PaidSubscriptionPlan, PaperCharges}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{ExpiryType, SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
@@ -38,45 +40,70 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   lazy val proxyHost = proxyUri.authority.host.address
   lazy val proxyPort = proxyUri.effectivePort
 
-  val now = new DateTime()
+  val now = DateTime.now
+  val today = now.toLocalDate
   val termEndDate = now.plusYears(1)
   val expiration = SubscriptionExpiration(termEndDate.plusDays(1), ExpiryType.SUB)
   val subsName = "A-S123"
 
-  val validSubscription: Subscription = new Subscription(
-      id = Subscription.Id("e4124121241234235f3245234"),
-      name = Subscription.Name(subsName),
-      accountId = Subscription.AccountId("a123"),
-      currency = GBP,
-      productRatePlanId = ProductRatePlanId("123"),
-      productName = "DigitalPack",
-      startDate = now.toLocalDate,
-      termStartDate = now.toLocalDate,
-      termEndDate = new DateTime().plusYears(1).toLocalDate,
-      features = List.empty[Subscription.Feature],
-      casActivationDate = None,
-      isCancelled = false,
-      ratePlanId = "1234",
-      isPaid = true,
-      promoCode = None
+  private val digipackSubscriptionPlan: Digipack = PaidSubscriptionPlan[Product.ZDigipack, PaidCharge[Digipack.type, BillingPeriod]](
+    id = RatePlanId("1234"),
+    name = "DigitalPack",
+    productRatePlanId = ProductRatePlanId("123"),
+    description = "",
+    productName = "Digital Pack",
+    product = Product.Digipack,
+    features = List.empty,
+    charges = PaidCharge(Digipack, BillingPeriod.year, PricingSummary(Map(GBP -> Price(119.90f, GBP)))),
+    chargedThrough = Some(today),
+    start = today,
+    end = today.plusYears(1)
   )
 
+  private val plusPaperPackageSubscriptionPlan: Paper = PaidSubscriptionPlan[Product.Voucher, PaperCharges](
+    id = RatePlanId("5678"),
+    name = "Everyday+",
+    productRatePlanId = ProductRatePlanId("456"),
+    description = "",
+    productName = "Paper Voucher",
+    product = Product.Voucher,
+    features = List.empty,
+    charges = PaperCharges(
+      dayPrices = Map(SundayPaper -> PricingSummary(Map(GBP -> Price(3.0f, GBP)))),
+      digipack = Some(PricingSummary(Map(GBP -> Price(119.90f, GBP))))),
+    chargedThrough = Some(today),
+    start = today,
+    end = today.plusYears(1)
+  )
 
+  private val validSubscription1 = new com.gu.memsub.subsv2.Subscription[Paid](
+    id = Subscription.Id("e4124121241234235f3245234"),
+    name = Subscription.Name(subsName),
+    accountId = Subscription.AccountId("a123"),
+    startDate = today,
+    firstPaymentDate = today,
+    termStartDate = today,
+    termEndDate = today.plusYears(1),
+    casActivationDate = None,
+    promoCode = None,
+    isCancelled = false,
+    hasPendingFreePlan = false,
+    plan = digipackSubscriptionPlan
+  )
+
+  private val validSubscription2 = validSubscription1.copy(plan = plusPaperPackageSubscriptionPlan)
 
   override lazy val subscriptionService = new SubscriptionService {
 
-    def checkSubscriptionValidity(subscription: Subscription, postcode: String) =
-      Future.successful(subscription.name.get.startsWith("A-S"))
-
-    def getSubscription(name: String): Future[Option[Subscription]] =
-      Future.successful(Some(validSubscription))
-
-    override def updateActivationDate(subscription: Subscription): Unit = ()
+    override def updateActivationDate(subscription: subsv2.Subscription[Paid]): Unit = ()
 
     override def getValidSubscription(subscriptionName: Name, password: String) =
       Future {
-        if (subscriptionName.get == subsName)
-          Some(validSubscription)
+        if (subscriptionName.get == subsName &&
+          validSubscription1.plan.charges.benefits.list.contains(Digipack) &&
+          validSubscription2.plan.charges.benefits.list.contains(Digipack)
+        )
+          Some(validSubscription2)
         else
           None
       }
