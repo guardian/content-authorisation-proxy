@@ -1,8 +1,8 @@
 package com.gu.subscriptions.cas.directives
 
-import com.gu.subscriptions.cas.config.Configuration.{system, _}
+import com.gu.subscriptions.cas.config.Configuration._
 import spray.http.{HttpResponse, StatusCodes}
-import spray.json.{JsObject, JsString, JsNumber}
+import spray.json.{JsNumber, JsObject, JsString}
 import spray.routing.Route
 import spray.routing.directives.RouteDirectives.complete
 
@@ -15,6 +15,14 @@ trait ErrorRoute {
       HttpResponse(
         status = StatusCodes.BadRequest,
         entity = errorMsg("Mandatory data missing from request", mandatoryDataMissingErrorCode)
+      )
+    )
+
+  val subscriptionCancelled: Route =
+    complete(
+      HttpResponse(
+        status = StatusCodes.ExpectationFailed,
+        entity = errorMsg("Subscription inactive (Cancelled)", subscriptionDisabledErrorCode)
       )
     )
 

@@ -6,6 +6,7 @@ import com.gu.memsub.Subscription.{Name, ProductRatePlanId, RatePlanId}
 import com.gu.memsub._
 import com.gu.memsub.subsv2.SubscriptionPlan.{Digipack, Paid, Paper}
 import com.gu.memsub.subsv2.{PaidCharge, PaidSubscriptionPlan, PaperCharges}
+import com.gu.subscriptions.cas.config.Configuration._
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{ExpiryType, SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
@@ -15,10 +16,11 @@ import spray.http.HttpHeaders._
 import spray.http.MediaTypes.`application/json`
 import spray.http.StatusCodes.BadRequest
 import spray.http.{HttpEntity, _}
-import spray.json._
+import spray.json.{JsNumber, JsString, _}
 import spray.routing.{HttpService, Route}
 import spray.testkit.ScalatestRouteTest
 
+import scala.collection.immutable.List.empty
 import scala.concurrent.Future
 
 class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDirective with HttpService {
@@ -44,7 +46,10 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   val today = now.toLocalDate
   val termEndDate = now.plusYears(1)
   val expiration = SubscriptionExpiration(termEndDate.plusDays(1), ExpiryType.SUB)
-  val subsName = "A-S123"
+  val cancelled = JsObject("error" -> JsObject("message" -> JsString("Subscription inactive (Cancelled)"), "code" -> JsNumber(subscriptionDisabledErrorCode)))
+  val subsName1 = "A-S123"
+  val subsName2 = "A-S456"
+  val subsName3 = "A-S789"
 
   private val digipackSubscriptionPlan: Digipack = PaidSubscriptionPlan[Product.ZDigipack, PaidCharge[Digipack.type, BillingPeriod]](
     id = RatePlanId("1234"),
@@ -53,7 +58,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     description = "",
     productName = "Digital Pack",
     product = Product.Digipack,
-    features = List.empty,
+    features = empty,
     charges = PaidCharge(Digipack, BillingPeriod.year, PricingSummary(Map(GBP -> Price(119.90f, GBP)))),
     chargedThrough = Some(today),
     start = today,
@@ -67,7 +72,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     description = "",
     productName = "Paper Voucher",
     product = Product.Voucher,
-    features = List.empty,
+    features = empty,
     charges = PaperCharges(
       dayPrices = Map(SundayPaper -> PricingSummary(Map(GBP -> Price(3.0f, GBP)))),
       digipack = Some(PricingSummary(Map(GBP -> Price(119.90f, GBP))))),
@@ -76,9 +81,9 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     end = today.plusYears(1)
   )
 
-  private val validSubscription1 = new com.gu.memsub.subsv2.Subscription[Paid](
+  private val digitalSubscription1 = new com.gu.memsub.subsv2.Subscription[Paid](
     id = Subscription.Id("e4124121241234235f3245234"),
-    name = Subscription.Name(subsName),
+    name = Subscription.Name(subsName1),
     accountId = Subscription.AccountId("a123"),
     startDate = today,
     firstPaymentDate = today,
@@ -91,21 +96,23 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     plan = digipackSubscriptionPlan
   )
 
-  private val validSubscription2 = validSubscription1.copy(plan = plusPaperPackageSubscriptionPlan)
+  private val digitalSubscription2 = digitalSubscription1.copy(name = Subscription.Name(subsName2), plan = plusPaperPackageSubscriptionPlan)
+
+  private val digitalSubscription3 = digitalSubscription1.copy(name = Subscription.Name(subsName3), isCancelled = true)
+
+  private val subsByName = Map(
+    subsName1 -> digitalSubscription1,
+    subsName2 -> digitalSubscription2,
+    subsName3 -> digitalSubscription3
+  )
 
   override lazy val subscriptionService = new SubscriptionService {
 
     override def updateActivationDate(subscription: subsv2.Subscription[Paid]): Unit = ()
 
-    override def getValidSubscription(subscriptionName: Name, password: String) =
+    override def getMatchingDigitalSubscription(subscriptionName: Name, password: String): Future[Option[com.gu.memsub.subsv2.Subscription[Paid]]] =
       Future {
-        if (subscriptionName.get == subsName &&
-          validSubscription1.plan.charges.benefits.list.contains(Digipack) &&
-          validSubscription2.plan.charges.benefits.list.contains(Digipack)
-        )
-          Some(validSubscription2)
-        else
-          None
+        subsByName.get(subscriptionName.get).filter(_.plan.charges.benefits.list.contains(Digipack))
       }
 
     override def isReady: Boolean = true
@@ -122,12 +129,34 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   "for the /subs endpoint" - {
     "when a valid request is made" - {
       "with a Zuora-formatted subscriber id" - {
-        "returns the expiration with one day leeway" in {
-          val payload = SubscriptionRequest(Some(subsName), Some("password")).toJson.toString()
-          val req = HttpEntity(`application/json`, payload)
+        "for a digipack subscription" - {
+          "returns the expiration with one day leeway" in {
+            val payload = SubscriptionRequest(Some(subsName1), Some("password")).toJson.toString()
+            val req = HttpEntity(`application/json`, payload)
 
-          Post("/subs", req) ~> inJson(subsRoute) ~> check {
-            assertResult(expiration.toJson)(responseAs[String].parseJson)
+            Post("/subs", req) ~> inJson(subsRoute) ~> check {
+              assertResult(expiration.toJson)(responseAs[String].parseJson)
+            }
+          }
+        }
+        "for a Newspaper 'plus' package subscription" - {
+          "returns the expiration with one day leeway" in {
+            val payload = SubscriptionRequest(Some(subsName2), Some("password")).toJson.toString()
+            val req = HttpEntity(`application/json`, payload)
+
+            Post("/subs", req) ~> inJson(subsRoute) ~> check {
+              assertResult(expiration.toJson)(responseAs[String].parseJson)
+            }
+          }
+        }
+        "for an expired digipack subscription" - {
+          "returns the expiration with one day leeway" in {
+            val payload = SubscriptionRequest(Some(subsName3), Some("password")).toJson.toString()
+            val req = HttpEntity(`application/json`, payload)
+
+            Post("/subs", req) ~> inJson(subsRoute) ~> check {
+              assertResult(cancelled.toJson)(responseAs[String].parseJson)
+            }
           }
         }
       }
@@ -147,7 +176,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       "without a Zuora format" - {
 
         "Drops leading zeroes before querying Zuora" in {
-          val payload = SubscriptionRequest(Some("00" + subsName), Some("password")).toJson.toString()
+          val payload = SubscriptionRequest(Some("00" + subsName1), Some("password")).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
             assertResult(expiration.toJson)(responseAs[String].parseJson)

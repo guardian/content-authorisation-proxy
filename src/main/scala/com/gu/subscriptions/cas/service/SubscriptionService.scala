@@ -6,7 +6,7 @@ import com.gu.memsub.Subscription.Name
 import com.gu.memsub.subsv2.Subscription
 import com.gu.memsub.subsv2.SubscriptionPlan.Paid
 import com.gu.memsub.subsv2.reads.ChargeListReads._
-import com.gu.memsub.subsv2.services.{ SubscriptionService => CommonSubscriptionService }
+import com.gu.memsub.subsv2.services.{SubscriptionService => CommonSubscriptionService}
 import com.gu.subscriptions.cas.config.Zuora._
 import com.gu.subscriptions.cas.model.ContactOps.WithMatchingPassword
 import com.gu.zuora.api.ZuoraService
@@ -16,7 +16,7 @@ import scala.concurrent.Future
 
 class SubscriptionService(zuoraService: ZuoraService,
                           commonSubscriptionService: CommonSubscriptionService[Future]) extends api.SubscriptionService with LazyLogging {
-  def getValidSubscription(subscriptionName: Name, password: String): Future[Option[Subscription[Paid]]] = {
+  def getMatchingDigitalSubscription(subscriptionName: Name, password: String): Future[Option[Subscription[Paid]]] = {
     def checkSubscriptionValidity(subscription: Subscription[Paid]): Future[Boolean] = {
       val postcodeCheck =
         if (subscription.plan.charges.benefits.list.contains(Digipack)) {

@@ -10,7 +10,7 @@ trait SubscriptionService {
 
   def updateActivationDate(subscription: Subscription[Paid]): Unit
 
-  def getValidSubscription(subscriptionName: Name, password: String) : Future[Option[Subscription[Paid]]]
+  def getMatchingDigitalSubscription(subscriptionName: Name, password: String) : Future[Option[Subscription[Paid]]]
 
   def isReady: Boolean
 }

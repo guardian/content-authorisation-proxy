@@ -135,23 +135,29 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   }
 
   def zuoraRoute(subsReq: SubscriptionRequest): Route = zuoraDirective(subsReq) { (activation, subscriptionName) =>
-    val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.trim.dropWhile(_ == '0')), subsReq.password.getOrElse(""))
+    val digitalSubscription = subscriptionService.getMatchingDigitalSubscription(Name(subscriptionName.get.trim.dropWhile(_ == '0')), subsReq.password.getOrElse(""))
 
-    validSubscription.onFailure {
+    digitalSubscription.onFailure {
       case t: Throwable =>
         logger.error(s"Failed getting Zuora subscription ${t.getMessage} ${subsReq.subscriberId}")
         throw t
     }
 
-    onSuccess(validSubscription) {
+    onSuccess(digitalSubscription) {
       case Some(subscription: Subscription[Paid]) =>
-        if (activation) { subscriptionService.updateActivationDate(subscription) }
-        // TODO ASAP - if deviceId and appId are provided:
+        if (subscription.isCancelled) {
+          subscriptionCancelled
+        } else {
+          if (activation) {
+            subscriptionService.updateActivationDate(subscription)
+          }
+          // TODO ASAP - if deviceId and appId are provided:
           // upsert a record in DynamoDB
-        //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
-        complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay(), ExpiryType.SUB))
+          //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
+          complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay(), ExpiryType.SUB))
+        }
       case _ if subscriptionName.get.startsWith("A-S") =>
-        //no point going to CAS if this is a Zuora sub
+        //no point going to CAS if this is definitely a Zuora sub
         notFound
       case _ =>
         //Go to CAS legacy /subs route
