@@ -33,7 +33,7 @@ libraryDependencies ++= {
     "net.kencochrane.raven" % "raven-logback" % "6.0.0",
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
     "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.10.50",
-    "com.gu" %% "membership-common" % "0.285",
+    "com.gu" %% "membership-common" % "0.293",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   )
 }
@@ -61,5 +61,6 @@ mappings in Universal ++= NativePackagerHelper.contentOf("cloudformation/resourc
 riffRaffPackageType := (packageBin in config("universal")).value
 
 addCommandAlias("devrun", "re-start --- -Dconfig.resource=DEV.conf")
+addCommandAlias("prodrun", "re-start --- -Dconfig.resource=PROD.conf")
 
 Revolver.settings

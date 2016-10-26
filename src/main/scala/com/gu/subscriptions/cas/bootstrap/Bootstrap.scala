@@ -26,7 +26,7 @@ object Bootstrap extends App {
   private val soapServiceMetrics = new ServiceMetrics(stage, appName, "zuora-soap-client")
   private val newProductIds = productIds(stage)
 
-  val zuoraService = new ZuoraService(Soap.client, Rest.client)
+  val zuoraService = new ZuoraService(Soap.client)
   val catalogService = new CatalogService[Future](newProductIds, Rest.simpleClient, Await.result(_, 10.seconds), stage)
 
   private val map = this.catalogService.catalog.map(_.fold[CatalogMap](error => {println(s"error: ${error.list.mkString}"); Map()}, _.map))
