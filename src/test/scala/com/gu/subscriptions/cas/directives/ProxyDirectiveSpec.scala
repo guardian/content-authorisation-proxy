@@ -1,11 +1,11 @@
 package com.gu.subscriptions.cas.directives
 
 import akka.testkit.TestProbe
-import com.gu.i18n.GBP
+import com.gu.i18n.Currency.GBP
 import com.gu.memsub.Subscription.{Name, ProductRatePlanId, RatePlanId}
 import com.gu.memsub._
-import com.gu.memsub.subsv2.SubscriptionPlan.{Digipack, Paid, Paper}
-import com.gu.memsub.subsv2.{PaidCharge, PaidSubscriptionPlan, PaperCharges}
+import com.gu.memsub.subsv2.SubscriptionPlan.{Digipack, Paid}
+import com.gu.memsub.subsv2.{PaidCharge, PaidSubscriptionPlan, PaperCharges, ReaderType}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model.{ExpiryType, SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
@@ -60,7 +60,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     end = today.plusYears(1)
   )
 
-  private val plusPaperPackageSubscriptionPlan: Paper = PaidSubscriptionPlan[Product.Voucher, PaperCharges](
+  private val plusPaperPackageSubscriptionPlan = PaidSubscriptionPlan[Product.Voucher, PaperCharges](
     id = RatePlanId("5678"),
     name = "Everyday+",
     productRatePlanId = ProductRatePlanId("456"),
@@ -88,7 +88,8 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     promoCode = None,
     isCancelled = false,
     hasPendingFreePlan = false,
-    plan = digipackSubscriptionPlan
+    plan = digipackSubscriptionPlan,
+    ReaderType.Direct
   )
 
   private val validSubscription2 = validSubscription1.copy(plan = plusPaperPackageSubscriptionPlan)
