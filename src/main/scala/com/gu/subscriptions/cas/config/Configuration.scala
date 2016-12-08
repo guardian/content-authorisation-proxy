@@ -3,6 +3,7 @@ package com.gu.subscriptions.cas.config
 import akka.actor.ActorSystem
 import com.gu.config.{DigitalPackRatePlanIds, MembershipRatePlanIds, SubsV2ProductIds, SubscriptionsProductIds}
 import com.gu.memsub.Digipack
+import com.gu.salesforce.SalesforceConfig
 import com.typesafe.config.ConfigFactory
 
 import scala.util.Try
@@ -25,6 +26,8 @@ object Configuration {
   implicit val system = ActorSystem("subscriptions-cas")
 
   val touchpointConfig = appConfig.getConfig("touchpoint.backend.environments").getConfig(stage)
+
+  val salesforceConfig =  SalesforceConfig.from(touchpointConfig, stage)
 
   val digipackPlans = DigitalPackRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.digitalpack"))
   val membershipPlans = MembershipRatePlanIds.fromConfig(touchpointConfig.getConfig("zuora.ratePlanIds.membership"))

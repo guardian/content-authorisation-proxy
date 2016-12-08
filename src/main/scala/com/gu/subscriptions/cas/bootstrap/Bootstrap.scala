@@ -6,7 +6,8 @@ import akka.util.Timeout
 import com.gu.memsub.subsv2.services.SubscriptionService._
 import com.gu.memsub.subsv2.services.{CatalogService, SubscriptionService => CommonSubscriptionService}
 import com.gu.monitoring.ServiceMetrics
-import com.gu.subscriptions.cas.config.Configuration.{appName, productIds, stage, system}
+import com.gu.salesforce.SimpleContactRepository
+import com.gu.subscriptions.cas.config.Configuration._
 import com.gu.subscriptions.cas.config.Zuora.{Rest, Soap}
 import com.gu.subscriptions.cas.service.SubscriptionService
 import com.gu.zuora.ZuoraService
@@ -26,12 +27,13 @@ object Bootstrap extends App {
   private val soapServiceMetrics = new ServiceMetrics(stage, appName, "zuora-soap-client")
   private val newProductIds = productIds(stage)
 
+  val sfSimpleContactRepo = new SimpleContactRepository(salesforceConfig, system.scheduler, appName)
   val zuoraService = new ZuoraService(Soap.client, Rest.client)
   val catalogService = new CatalogService[Future](newProductIds, Rest.simpleClient, Await.result(_, 10.seconds), stage)
 
   private val map = this.catalogService.catalog.map(_.fold[CatalogMap](error => {println(s"error: ${error.list.mkString}"); Map()}, _.map))
   val commonSubscriptionService = new CommonSubscriptionService[Future](newProductIds, map, Rest.simpleClient, zuoraService.getAccountIds, () => LocalDate.now)
-  val subscriptionService = new SubscriptionService(zuoraService, commonSubscriptionService)
+  val subscriptionService = new SubscriptionService(zuoraService, commonSubscriptionService, sfSimpleContactRepo)
   val service = system.actorOf(Props(classOf[CASService], subscriptionService))
 
   implicit val timeout = Timeout(5.seconds)
