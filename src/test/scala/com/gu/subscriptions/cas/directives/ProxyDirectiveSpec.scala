@@ -20,6 +20,7 @@ import spray.routing.{HttpService, Route}
 import spray.testkit.ScalatestRouteTest
 
 import scala.concurrent.Future
+import scalaz.NonEmptyList
 
 class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDirective with HttpService {
 
@@ -88,11 +89,12 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     promoCode = None,
     isCancelled = false,
     hasPendingFreePlan = false,
-    plan = digipackSubscriptionPlan,
-    ReaderType.Direct
+    plans = NonEmptyList(digipackSubscriptionPlan),
+    readerType = ReaderType.Direct,
+    autoRenew = true
   )
 
-  private val validSubscription2 = validSubscription1.copy(plan = plusPaperPackageSubscriptionPlan)
+  private val validSubscription2 = validSubscription1.copy(plans = NonEmptyList(plusPaperPackageSubscriptionPlan))
 
   override lazy val subscriptionService = new SubscriptionService {
 

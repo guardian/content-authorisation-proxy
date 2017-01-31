@@ -30,7 +30,7 @@ object Bootstrap extends App {
   val catalogService = new CatalogService[Future](newProductIds, Rest.simpleClient, Await.result(_, 10.seconds), stage)
 
   private val map = this.catalogService.catalog.map(_.fold[CatalogMap](error => {println(s"error: ${error.list.mkString}"); Map()}, _.map))
-  val commonSubscriptionService = new CommonSubscriptionService[Future](newProductIds, map, Rest.simpleClient, zuoraService.getAccountIds, () => LocalDate.now)
+  val commonSubscriptionService = new CommonSubscriptionService[Future](newProductIds, map, Rest.simpleClient, zuoraService.getAccountIds)
   val subscriptionService = new SubscriptionService(zuoraService, commonSubscriptionService)
   val service = system.actorOf(Props(classOf[CASService], subscriptionService))
 
