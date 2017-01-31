@@ -34,7 +34,7 @@ class SubscriptionService(zuoraService: ZuoraService,
           contact <- zuoraService.getContact(account.billToId)
         } yield contact.matchesPassword(password)
       } else {
-        Future(false)
+        Future.successful(false)
       }
     }
 
