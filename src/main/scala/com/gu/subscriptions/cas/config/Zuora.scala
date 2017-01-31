@@ -29,7 +29,6 @@ object Zuora {
   }
 
   val cloudWatch = new CloudWatch {
-    override val region: Region = Region.getRegion(Regions.EU_WEST_1)
     override val application: String = appName
     override val service: String = "ZuoraSubscriptionService"
     override val stage: String = Configuration.stage
