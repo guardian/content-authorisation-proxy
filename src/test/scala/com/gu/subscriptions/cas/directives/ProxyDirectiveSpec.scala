@@ -55,7 +55,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     productName = "Digital Pack",
     product = Product.Digipack,
     features = List.empty,
-    charges = PaidCharge(Digipack, BillingPeriod.year, PricingSummary(Map(GBP -> Price(119.90f, GBP)))),
+    charges = PaidCharge(Digipack, BillingPeriod.Year, PricingSummary(Map(GBP -> Price(119.90f, GBP)))),
     chargedThrough = Some(today),
     start = today,
     end = today.plusYears(1)
