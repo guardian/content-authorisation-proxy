@@ -160,9 +160,9 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       None
     } else {
       logger.info(s"EMERGENCY PROVIDER triggered for subscriber id:'$subsId' password: '${req.password} deviceId:${req.deviceId}")
-      val payloadResult = emergencyTokens.decoder.decode(subsId)
+      val payloadResult = emergencyTokens.decoder.decode(subsId) //todo for some reason this throws an exception with an invalid token...
       logger.info(s"subscriber id:'$subsId' resolves to $payloadResult")
-      processPayload(payloadResult) //todo for some reason this throws an exception with an invalid token...
+      processPayload(payloadResult)
     }
   }
 }
