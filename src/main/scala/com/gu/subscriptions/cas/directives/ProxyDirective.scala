@@ -136,7 +136,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
 
 
-  def processEmergencyToken(req: SubscriptionRequest):Option[LegacySubscriptionExpiration] = {
+  def processEmergencyToken(req: SubscriptionRequest):Option[SubscriptionExpiration] = {
     import com.gu.subscriptions.cas.model.TokenPayloadOps._
 
     req.subscriberId.flatMap{ rawSubscriberId1 =>
@@ -146,11 +146,11 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
         case Valid(payload) =>
           logger.info(s"subscriber id:'$subsId' was created on ${payload.creationDate}")
 
-          val subExp = LegacySubscriptionExpiration(
+          val subExp = SubscriptionExpiration(
             expiryDate = payload.expiryDate,
             expiryType = ExpiryType.SUB,
-            subscriptionCode = payload.subscriptionCode,
-            provider = Configuration.EmergencyTokens.prefix
+            subscriptionCode = Some(payload.subscriptionCode),
+            provider = Some(Configuration.EmergencyTokens.prefix)
           )
           Some(subExp)
         case _ => None
