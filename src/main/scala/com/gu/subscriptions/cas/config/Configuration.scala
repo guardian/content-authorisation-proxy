@@ -1,6 +1,7 @@
 package com.gu.subscriptions.cas.config
 
 import akka.actor.ActorSystem
+import com.gu.cas.PrefixedTokens
 import com.gu.config.{DigitalPackRatePlanIds, MembershipRatePlanIds, SubsV2ProductIds, SubscriptionsProductIds}
 import com.gu.memsub.Digipack
 import com.typesafe.config.ConfigFactory
@@ -47,7 +48,11 @@ object Configuration {
 
   def productIds(env: String): com.gu.memsub.subsv2.reads.ChargeListReads.ProductIds =
     SubsV2ProductIds(touchpointConfig.getConfig("zuora.productIds"))
-
+  object EmergencyTokens {
+    private val conf = appConfig.getConfig("cas.emergency.subscriber.auth")
+    val prefix = conf.getString("prefix")
+    val secret = conf.getString("secret")
+  }
 
 
 }
