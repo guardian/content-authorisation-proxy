@@ -1,15 +1,16 @@
 package com.gu.subscriptions.cas.directives
 
 import akka.testkit.TestProbe
+import com.gu.cas._
 import com.gu.i18n.Currency.GBP
 import com.gu.memsub.Subscription.{Name, ProductRatePlanId, RatePlanId}
 import com.gu.memsub._
 import com.gu.memsub.subsv2.SubscriptionPlan.{Digipack, Paid}
 import com.gu.memsub.subsv2.{PaidCharge, PaidSubscriptionPlan, PaperCharges, ReaderType}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
-import com.gu.subscriptions.cas.model.{ExpiryType, SubscriptionExpiration, SubscriptionRequest}
+import com.gu.subscriptions.cas.model.{EmergencyTokens, ExpiryType, SubscriptionExpiration, SubscriptionRequest}
 import com.gu.subscriptions.cas.service.api.SubscriptionService
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, Days, Weeks}
 import org.scalatest.FreeSpec
 import spray.http.HttpHeaders._
 import spray.http.MediaTypes.`application/json`
@@ -45,6 +46,12 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
   val today = now.toLocalDate
   val termEndDate = now.plusYears(1)
   val expiration = SubscriptionExpiration(termEndDate.plusDays(1), ExpiryType.SUB)
+  val emergencyExpiration = SubscriptionExpiration(
+    expiryDate = DateTime.parse("2018-03-14"),
+    expiryType = ExpiryType.SUB,
+    subscriptionCode = Some(SevenDay),
+    provider = Some("G99")
+  )
   val subsName = "A-S123"
 
   private val digipackSubscriptionPlan: Digipack = PaidSubscriptionPlan[Product.ZDigipack, PaidCharge[Digipack.type, BillingPeriod]](
@@ -96,6 +103,25 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
 
   private val validSubscription2 = validSubscription1.copy(plans = NonEmptyList(plusPaperPackageSubscriptionPlan))
 
+
+  object testDecoder extends PrefixedTokens("test", "G99") {
+    override def decode(subId: String) = if (subId == "G99TESTID")
+      Valid(TokenPayload(
+        creationDateOffset = Days.days(1636),
+        period = Weeks.weeks(52),
+        subscriptionCode = SevenDay))
+
+    else
+      Invalid(None)
+
+  }
+
+  object testEmergencyTokens extends EmergencyTokens("G99", "test"){
+    override val decoder = testDecoder
+
+
+  }
+  override val emergencyTokens = testEmergencyTokens
   override lazy val subscriptionService = new SubscriptionService {
 
     override def updateActivationDate(subscription: subsv2.Subscription[Paid]): Unit = ()
@@ -126,7 +152,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
     "when a valid request is made" - {
       "with a Zuora-formatted subscriber id" - {
         "returns the expiration with one day leeway" in {
-          val payload = SubscriptionRequest(Some(subsName), Some("password")).toJson.toString()
+          val payload = SubscriptionRequest(Some(subsName), Some("password"), None).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
@@ -138,7 +164,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       "when an Invalid request is made" - {
         "with a Zuora-formatted subscriber id" - {
           "Returns a 404" in {
-            val payload = SubscriptionRequest(Some("A-S-invalid"), Some("password")).toJson.toString()
+            val payload = SubscriptionRequest(Some("A-S-invalid"), Some("password"), None).toJson.toString()
             val req = HttpEntity(`application/json`, payload)
 
             Post("/subs", req) ~> inJson(subsRoute) ~> check {
@@ -150,19 +176,19 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       "without a Zuora format" - {
 
         "Drops leading zeroes before querying Zuora" in {
-          val payload = SubscriptionRequest(Some("00" + subsName), Some("password")).toJson.toString()
+          val payload = SubscriptionRequest(Some("00" + subsName), Some("password"), None).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
             assertResult(expiration.toJson)(responseAs[String].parseJson)
           }
         }
 
-        "proxies the request to CAS" in {
-          val payload = SubscriptionRequest(Some("id"), Some("password")).toJson.toString()
+        "handles emergency tokens" in {
+          val payload = SubscriptionRequest(Some("G99TESTID"), Some("password"), None).toJson.toString()
           val req = HttpEntity(`application/json`, payload)
 
           Post("/subs", req) ~> inJson(subsRoute) ~> check {
-            assertResult(responseAs[String])(handledByCAS)
+            assertResult(emergencyExpiration.toJson)(responseAs[String].parseJson)
           }
         }
       }
