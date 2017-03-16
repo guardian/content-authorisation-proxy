@@ -139,25 +139,11 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   }
 
 
-  def processEmergencyToken(req: SubscriptionRequest): Option[SubscriptionExpiration] = {
+  def getEmergencyTokenExpiration(req: SubscriptionRequest): Option[SubscriptionExpiration] = {
     import com.gu.subscriptions.cas.model.TokenPayloadOps._
 
-    req.subscriberId.flatMap { rawSubscriberId1 =>
-      val subsId = rawSubscriberId1.trim.toUpperCase
-
-      def processPayload(payloadResult: PayloadResult) = payloadResult match {
-        case Valid(payload) =>
-          logger.info(s"subscriber id:'$subsId' was created on ${payload.creationDate}")
-
-          val subExp = SubscriptionExpiration(
-            expiryDate = payload.expiryDate,
-            expiryType = ExpiryType.SUB,
-            subscriptionCode = Some(payload.subscriptionCode),
-            provider = Some(Configuration.EmergencyTokens.prefix)
-          )
-          Some(subExp)
-        case _ => None
-      }
+    req.subscriberId.flatMap { rawSubscriberId =>
+      val subsId = rawSubscriberId.trim.toUpperCase
 
       if (!subsId.startsWith(emergencyTokens.prefix)) {
         None
@@ -166,21 +152,27 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
         Try(emergencyTokens.decoder.decode(subsId)) match {
 
-          case Success(payloadResult) =>
-            logger.info(s"subscriber id:'$subsId' resolves to $payloadResult")
-            processPayload(payloadResult)
+          case Success(Valid(payload)) =>
+            logger.info(s"subscriber id:'$subsId' resolves to $payload")
+            logger.info(s"subscriber id:'$subsId' was created on ${payload.creationDate}")
 
-          case Failure(cause) =>
-            logger.error(s"error decoding token $subsId :  $cause")
+            Some(SubscriptionExpiration(
+              expiryDate = payload.expiryDate,
+              expiryType = ExpiryType.SUB,
+              subscriptionCode = Some(payload.subscriptionCode),
+              provider = Some(Configuration.EmergencyTokens.prefix)
+            ))
+
+          case errorResponse =>
+            logger.error(s"error decoding token $subsId :  $errorResponse")
             None
         }
       }
     }
   }
 
-  def processSub(subsReq: SubscriptionRequest): Route = {
-    processEmergencyToken(subsReq).map(complete(_)) getOrElse {
-      zuoraDirective(subsReq) { (activation, subscriptionName) =>
+  def zuoraRoute(subsReq: SubscriptionRequest): Route = {
+         zuoraDirective(subsReq) { (activation, subscriptionName) =>
 
         val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.trim.dropWhile(_ == '0')), subsReq.password.getOrElse(""))
 
@@ -203,15 +195,15 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
           case _ => notFound
         }
       }
-    }
   }
+
   val subsRoute = (path("subs") & post) {
     entity(as[SubscriptionRequest]) { subsReq =>
-      // TODO third - handle limit of regisrations
+      // TODO third - handle limit of registrations
         // get count of activations for these credentials from Dynamo
         // if count >= "max.subscriptions.per.user" return error: "Credentials used too often", credentials.overuse.error.code
         // else, continue, the zuoraRoute must update the count iff successful
-      processSub(subsReq)
+      getEmergencyTokenExpiration(subsReq).map(complete(_)) getOrElse zuoraRoute(subsReq)
     } ~ badRequest
   }
 }
