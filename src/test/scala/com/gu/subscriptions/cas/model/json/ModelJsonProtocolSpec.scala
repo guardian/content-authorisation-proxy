@@ -1,11 +1,13 @@
 package com.gu.subscriptions.cas.model.json
 
 import com.gu.subscriptions.CAS.CASError
-import com.gu.subscriptions.cas.model.{SubscriptionExpiration, ExpiryType}
+import com.gu.subscriptions.cas.model.{ExpiryType, SubscriptionExpiration}
 import org.joda.time.DateTime
 import org.scalatest.FreeSpec
 import spray.json._
 import ModelJsonProtocol._
+import com.gu.cas.SevenDay
+
 
 class ModelJsonProtocolSpec extends FreeSpec {
   "For CASError" - {
@@ -45,4 +47,27 @@ class ModelJsonProtocolSpec extends FreeSpec {
       assertResult(expected.parseJson)(expiration.toJson)
     }
   }
+    "handles serialization of emergency token response" in {
+      val expiration = SubscriptionExpiration(
+        expiryDate = new DateTime(2015, 5, 21, 12, 0),
+        expiryType = ExpiryType.SUB,
+        provider = Some("G99"),
+        subscriptionCode = Some(SevenDay)
+      )
+
+      val expected =
+        """
+          |{
+          |  "expiry": {
+          |    "expiryDate": "2015-05-21",
+          |    "expiryType": "sub",
+          |    "provider": "G99",
+          |    "content": "SevenDay",
+          |    "subscriptionCode": "SevenDay"
+          |  }
+          |}
+        """.stripMargin
+
+      assertResult(expected.parseJson)(expiration.toJson)
+    }
 }

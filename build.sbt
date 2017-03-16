@@ -34,6 +34,7 @@ libraryDependencies ++= {
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
     "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.10.50",
     "com.gu" %% "membership-common" % "0.360",
+    "com.gu" %% "content-authorisation-common" % "0.1",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   )
 }
