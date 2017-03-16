@@ -28,14 +28,18 @@ import spray.routing.{Directives, Route}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import com.gu.cas._
+import com.gu.cas.{PayloadResult, _}
+
+import scala.util.{Success,Failure, Try}
 
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   implicit val actorSystem: ActorSystem
   implicit val timeout: Timeout = 3.seconds
   def subscriptionService: SubscriptionService
-  def emergencyTokens : EmergencyTokens
+
+  def emergencyTokens: EmergencyTokens
+
   lazy val io: ActorRef = IO(Http)
   val filterHeaders: HttpResponse => HttpResponse = resp =>
     resp.withHeaders(resp.headers.filter {
@@ -68,7 +72,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     val proxyUri = Uri(proxy)
     val request = createProxyRequest(in, proxyUri)
     val hostConnectorSetup = connectorFromUrl(proxyUri)
-    val out = (io ?(request, hostConnectorSetup)).mapTo[HttpResponse].map(
+    val out = (io ? (request, hostConnectorSetup)).mapTo[HttpResponse].map(
       logProxyResp(metrics) ~>
         filterHeaders ~>
         changeResponseCode
@@ -94,13 +98,14 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       val request: HttpRequest = ctx.request
       val casResponse = proxyRequest(request, Configuration.proxy, metrics)
       // TODO first - a few days before authRoute is rewritten (to migrate expiry dates for as many active devices as possible):
-        // if request contains app and device id
-          // upsert the response record in DynamoDB (replacing the device's sub ID if necessary)
+      // if request contains app and device id
+      // upsert the response record in DynamoDB (replacing the device's sub ID if necessary)
       ctx.complete(casResponse)
     }
   }
 
-  val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
+  val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS)
+  // how many app types?
   val authRouteExpiryDateHistogram = new Histogram("authRouteExpiryDate", 1, DAYS) // what variance of dates?
 
   val authRoute: Route = (path("auth") & post) {
@@ -135,11 +140,10 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   }
 
 
-
-  def processEmergencyToken(req: SubscriptionRequest):Option[SubscriptionExpiration] = {
+  def processEmergencyToken(req: SubscriptionRequest): Option[SubscriptionExpiration] = {
     import com.gu.subscriptions.cas.model.TokenPayloadOps._
 
-    req.subscriberId.flatMap{ rawSubscriberId1 =>
+    req.subscriberId.flatMap { rawSubscriberId1 =>
       val subsId = rawSubscriberId1.trim.toUpperCase
 
       def processPayload(payloadResult: PayloadResult) = payloadResult match {
@@ -156,55 +160,59 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
         case _ => None
       }
 
-    if (!subsId.startsWith(emergencyTokens.prefix)) {
-      None
-    } else {
-      logger.info(s"EMERGENCY PROVIDER triggered for subscriber id:'$subsId' password: '${req.password} deviceId:${req.deviceId}")
-      val payloadResult = emergencyTokens.decoder.decode(subsId)
-      logger.info(s"subscriber id:'$subsId' resolves to $payloadResult")
-      processPayload(payloadResult)
-    }
-  }
-}
+      if (!subsId.startsWith(emergencyTokens.prefix)) {
+        None
+      } else {
+        logger.info(s"EMERGENCY PROVIDER triggered for subscriber id:'$subsId' password: '${req.password} deviceId:${req.deviceId}")
 
-  def emergencyTokensRoute(subsReq: SubscriptionRequest): Route = {
-    processEmergencyToken(subsReq).map(complete(_)) getOrElse reject
-  }
+        Try(emergencyTokens.decoder.decode(subsId)) match {
 
-  def zuoraRoute(subsReq: SubscriptionRequest): Route = {
+          case Success(payloadResult) =>
+            logger.info(s"subscriber id:'$subsId' resolves to $payloadResult")
+            processPayload(payloadResult)
 
-    zuoraDirective(subsReq) { (activation, subscriptionName) =>
-
-      val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.trim.dropWhile(_ == '0')), subsReq.password.getOrElse(""))
-
-      validSubscription.onFailure {
-        case t: Throwable =>
-          logger.error(s"Failed getting Zuora subscription ${t.getMessage} ${subsReq.subscriberId}")
-          throw t
-      }
-
-      onSuccess(validSubscription) {
-        case Some(subscription: Subscription[Paid]) =>
-          if (activation) {
-            subscriptionService.updateActivationDate(subscription)
-          }
-          // TODO ASAP - if deviceId and appId are provided:
-          // upsert a record in DynamoDB
-          //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
-
-          complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay(), ExpiryType.SUB))
-        case _  => notFound
+          case Failure(cause) =>
+            logger.error(s"error decoding token $subsId :  $cause")
+            None
+        }
       }
     }
   }
 
+  def processSub(subsReq: SubscriptionRequest): Route = {
+    processEmergencyToken(subsReq).map(complete(_)) getOrElse {
+      zuoraDirective(subsReq) { (activation, subscriptionName) =>
+
+        val validSubscription = subscriptionService.getValidSubscription(Name(subscriptionName.get.trim.dropWhile(_ == '0')), subsReq.password.getOrElse(""))
+
+        validSubscription.onFailure {
+          case t: Throwable =>
+            logger.error(s"Failed getting Zuora subscription ${t.getMessage} ${subsReq.subscriberId}")
+            throw t
+        }
+
+        onSuccess(validSubscription) {
+          case Some(subscription: Subscription[Paid]) =>
+            if (activation) {
+              subscriptionService.updateActivationDate(subscription)
+            }
+            // TODO ASAP - if deviceId and appId are provided:
+            // upsert a record in DynamoDB
+            //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
+
+            complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay(), ExpiryType.SUB))
+          case _ => notFound
+        }
+      }
+    }
+  }
   val subsRoute = (path("subs") & post) {
     entity(as[SubscriptionRequest]) { subsReq =>
       // TODO third - handle limit of regisrations
         // get count of activations for these credentials from Dynamo
         // if count >= "max.subscriptions.per.user" return error: "Credentials used too often", credentials.overuse.error.code
         // else, continue, the zuoraRoute must update the count iff successful
-      emergencyTokensRoute(subsReq) ~ zuoraRoute(subsReq)
+      processSub(subsReq)
     } ~ badRequest
   }
 }
