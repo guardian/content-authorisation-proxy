@@ -187,10 +187,6 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
             if (activation) {
               subscriptionService.updateActivationDate(subscription)
             }
-            // TODO ASAP - if deviceId and appId are provided:
-            // upsert a record in DynamoDB
-            //Since the dates are in PST, we want to make sure that we don't cut any subscription one day short
-
             complete(SubscriptionExpiration(subscription.termEndDate.plusDays(1).toDateTimeAtStartOfDay(), ExpiryType.SUB))
           case _ => notFound
         }
