@@ -72,7 +72,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
     val proxyUri = Uri(proxy)
     val request = createProxyRequest(in, proxyUri)
     val hostConnectorSetup = connectorFromUrl(proxyUri)
-    val out = (io ? (request, hostConnectorSetup)).mapTo[HttpResponse].map(
+    val out = (io ?(request, hostConnectorSetup)).mapTo[HttpResponse].map(
       logProxyResp(metrics) ~>
         filterHeaders ~>
         changeResponseCode
@@ -98,14 +98,13 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       val request: HttpRequest = ctx.request
       val casResponse = proxyRequest(request, Configuration.proxy, metrics)
       // TODO first - a few days before authRoute is rewritten (to migrate expiry dates for as many active devices as possible):
-      // if request contains app and device id
-      // upsert the response record in DynamoDB (replacing the device's sub ID if necessary)
+        // if request contains app and device id
+          // upsert the response record in DynamoDB (replacing the device's sub ID if necessary)
       ctx.complete(casResponse)
     }
   }
 
-  val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS)
-  // how many app types?
+  val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
   val authRouteExpiryDateHistogram = new Histogram("authRouteExpiryDate", 1, DAYS) // what variance of dates?
 
   val authRoute: Route = (path("auth") & post) {
