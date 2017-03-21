@@ -75,8 +75,6 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
   val authRouteExpiryDateHistogram = new Histogram("authRouteExpiryDate", 1, DAYS) // what variance of dates?
 
-  private def expiryResponse(expirationDate:DateTime) = complete(AuthResponse(expirationDate))
-
   val authRoute: Route = (path("auth") & post) {
     entity(as[AuthorisationRequest]) { subsReq =>
       subsReq.appId.foreach(authRouteAppIdHistogram.count)
