@@ -38,13 +38,12 @@ class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
 
     scanamoResponse map {
       case Some(Right(item)) => Success(Some(item.expiryDate))
-      case Some(Left(e)) => Error(e.toString) //todo what string should this return?
+      case Some(Left(e)) => Error(e.toString)
       case None => Success(None)
     }
   }
 
   override def setExpiration(appId: String, deviceId: String, expiration: DateTime): Future[SetExpirationResponse] = {
-    //todo see if we can handle the error case here
     val newItem = AuthItem(appId, deviceId, expiration)
     ScanamoAsync.exec(dynamoClient)(authTable.put(newItem)).map(a => api.Success)
   }
