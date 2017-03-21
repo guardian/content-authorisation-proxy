@@ -2,10 +2,10 @@ package com.gu.subscriptions.cas.model.json
 
 import com.gu.cas.SubscriptionCode
 import com.gu.subscriptions.CAS.CASError
-import com.gu.subscriptions.cas.model.{AuthorisationRequest, SubscriptionExpiration, SubscriptionRequest}
+import com.gu.subscriptions.cas.model._
 import spray.json._
 import com.gu.subscriptions.cas.model.TokenPayloadOps._
-
+import com.gu.subscriptions.cas.model.ExpiryType
 object ModelJsonProtocol extends DefaultJsonProtocol {
   implicit object SubscriptionExpirationProtocol extends RootJsonWriter[SubscriptionExpiration] {
     override def write(sub: SubscriptionExpiration): JsValue = {
@@ -21,6 +21,24 @@ object ModelJsonProtocol extends DefaultJsonProtocol {
       JsObject(
         "expiry" -> JsObject(values ++ optionalValues)
       )
+    }
+  }
+
+  implicit object AuthExpiryResponseProtocol extends RootJsonWriter[AuthExpiryResponse] {
+    override def write(res: AuthExpiryResponse): JsValue = JsObject(
+      "expiry" -> JsObject(
+        "expiryType" -> JsString(ExpiryType.FREE),
+        "provider" -> JsString("default"),
+        "expiryDate" -> JsString(res.expiryDate.toString("YYYY-MM-dd"))
+      )
+    )
+  }
+  implicit val errorResponseFormat = jsonFormat2(ErrorResponse)
+
+  implicit object AuthorizationResponseProtocol extends RootJsonWriter[AuthorizationResponse] {
+    override def write(obj: AuthorizationResponse): JsValue = obj match {
+      case e: ErrorResponse => e.toJson
+      case a: AuthExpiryResponse => a.toJson
     }
   }
 

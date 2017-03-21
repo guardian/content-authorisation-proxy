@@ -229,6 +229,37 @@
                 "TTL" : "120",
                 "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
             }
+        },
+        //TODO CHECK IF THIS IS CORRECT AND ADD ONE FOR PROD
+        "CASAuthTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "appId",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "deviceId",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "appId",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "deviceId",
+                        "KeyType": "RANGE"
+                    }
+                ],
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "1",
+                    "WriteCapacityUnits": "1"
+                },
+                "TableName": "cas-auth-DEV"
+            }
         }
     },
     "Outputs": {

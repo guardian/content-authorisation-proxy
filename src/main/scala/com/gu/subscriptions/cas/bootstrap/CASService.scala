@@ -2,14 +2,14 @@ package com.gu.subscriptions.cas.bootstrap
 
 import com.gu.subscriptions.cas.config.Configuration
 import com.gu.subscriptions.cas.directives.{CheckSentryErrors, ErrorRoute, HealthCheckDirective, ProxyDirective}
-import com.gu.subscriptions.cas.service.SubscriptionService
+import com.gu.subscriptions.cas.service.{DataStore, SubscriptionService}
 import com.typesafe.scalalogging.LazyLogging
 import spray.routing._
 import spray.util.LoggingContext
 import spray.http.MediaTypes._
 import com.gu.subscriptions.cas.model.EmergencyTokens
 
-class CASService(val subscriptionService: SubscriptionService) extends HttpServiceActor
+class CASService(val subscriptionService: SubscriptionService, val dataStore:DataStore) extends HttpServiceActor
   with ProxyDirective
   with HealthCheckDirective
   with CheckSentryErrors
