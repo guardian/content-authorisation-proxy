@@ -83,16 +83,15 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       (subsReq.deviceId, subsReq.appId) match {
         case (Some(deviceId), Some(appId)) =>
 
-          def setNewExpirationDate = {
-            val newExpiryDate = DateTime.now.plusWeeks(2)
-            dataStore.setExpiration(appId, deviceId, newExpiryDate)
-            AuthResponse(newExpiryDate)
-          }
-
           val expiryResponse: Future[ToResponseMarshallable] = dataStore.getExpiration(appId = appId, deviceId = deviceId).map { getResponse =>
             getResponse match {
               case SuccessResponse(Some(expirationDate)) => AuthResponse(expirationDate)
-              case SuccessResponse(None) => setNewExpirationDate
+
+              case SuccessResponse(None) =>
+                val newExpiryDate = DateTime.now.plusWeeks(2)
+                dataStore.setExpiration(appId, deviceId, newExpiryDate)
+                AuthResponse(newExpiryDate)
+
               case Error(message) =>
                 logger.error(s"dynamo db error for appId :$appId, deviceId: $deviceId, error message: $message")
                 serverErrorResponse
