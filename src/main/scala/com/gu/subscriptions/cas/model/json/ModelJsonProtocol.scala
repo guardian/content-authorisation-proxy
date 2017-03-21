@@ -24,22 +24,14 @@ object ModelJsonProtocol extends DefaultJsonProtocol {
     }
   }
 
-  implicit object AuthExpiryResponseProtocol extends RootJsonWriter[AuthExpiryResponse] {
-    override def write(res: AuthExpiryResponse): JsValue = JsObject(
+  implicit object AuthorizationResponseProtocol extends RootJsonWriter[AuthResponse] {
+    override def write(res: AuthResponse): JsValue = JsObject(
       "expiry" -> JsObject(
         "expiryType" -> JsString(ExpiryType.FREE),
         "provider" -> JsString("default"),
         "expiryDate" -> JsString(res.expiryDate.toString("YYYY-MM-dd"))
       )
     )
-  }
-  implicit val errorResponseFormat = jsonFormat2(ErrorResponse)
-
-  implicit object AuthorizationResponseProtocol extends RootJsonWriter[AuthorizationResponse] {
-    override def write(obj: AuthorizationResponse): JsValue = obj match {
-      case e: ErrorResponse => e.toJson
-      case a: AuthExpiryResponse => a.toJson
-    }
   }
 
   implicit val subsRequestFormat = jsonFormat3(SubscriptionRequest)

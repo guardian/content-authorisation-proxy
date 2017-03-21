@@ -4,9 +4,7 @@ import org.joda.time.DateTime
 
 case class SubscriptionExpiration(expiryDate: DateTime, expiryType: String, content: String = "SevenDay", subscriptionCode: Option[SubscriptionCode] = None, provider: Option[String] = None)
 
-trait AuthorizationResponse
-case class AuthExpiryResponse(expiryDate: DateTime) extends AuthorizationResponse
-case class ErrorResponse(message: String, code: Int) extends AuthorizationResponse
+case class AuthResponse(expiryDate: DateTime)
 
 object ExpiryType {
   val SUB = "sub"

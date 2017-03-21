@@ -31,6 +31,8 @@ import com.gu.cas.{PayloadResult, _}
 import com.gu.scanamo.error.DynamoReadError
 import com.gu.subscriptions.cas.service.DataStore
 import org.joda.time.{DateTime, DateTimeZone}
+import spray.httpx.marshalling.ToResponseMarshallable
+
 import scala.util.{Failure, Success, Try}
 
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
@@ -73,7 +75,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
   val authRouteExpiryDateHistogram = new Histogram("authRouteExpiryDate", 1, DAYS) // what variance of dates?
 
-  private def expiryResponse(expirationDate:DateTime) = complete(AuthExpiryResponse(expirationDate))
+  private def expiryResponse(expirationDate:DateTime) = complete(AuthResponse(expirationDate))
 
   val authRoute: Route = (path("auth") & post) {
     entity(as[AuthorisationRequest]) { subsReq =>
@@ -81,32 +83,29 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
       subsReq.expiryDate.foreach(authRouteExpiryDateHistogram.count)
 
       (subsReq.deviceId, subsReq.appId) match {
-
         case (Some(deviceId), Some(appId)) =>
 
-         val expiryResponse:Future[AuthorizationResponse] = dataStore.getExpiration(appId = appId, deviceId = deviceId).map{ getResponse =>
+          def setNewExpirationDate = {
+            val newExpiryDate = DateTime.now.plusWeeks(2)
+            dataStore.setExpiration(appId, deviceId, newExpiryDate)
+            AuthResponse(newExpiryDate)
+          }
+
+          val expiryResponse: Future[ToResponseMarshallable] = dataStore.getExpiration(appId = appId, deviceId = deviceId).map { getResponse =>
             getResponse match {
-
-              case SuccessResponse(Some(expirationDate)) => AuthExpiryResponse(expirationDate)
-
-              case SuccessResponse(None) =>
-                val newExpiryDate = DateTime.now.plusWeeks(2)
-                //todo see how to detect if the dynamo put call failed
-                dataStore.setExpiration(appId, deviceId, newExpiryDate)
-                AuthExpiryResponse(newExpiryDate)
-
+              case SuccessResponse(Some(expirationDate)) => AuthResponse(expirationDate)
+              case SuccessResponse(None) => setNewExpirationDate
               case Error(message) =>
                 logger.error(s"dynamo db error for appId :$appId, deviceId: $deviceId, error message: $message")
-                ErrorResponse("some error", 123) //todo see what error to return here
+                serverErrorResponse
             }
           }
-          onSuccess(expiryResponse) {complete(_)}
 
-        case _ => badRequest //see if we should return more information here
+          complete(expiryResponse)
+
+        case _ => badRequest
       }
-
     }
-
   }
 
 
