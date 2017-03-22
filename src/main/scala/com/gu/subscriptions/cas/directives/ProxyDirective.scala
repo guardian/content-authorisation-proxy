@@ -44,34 +44,6 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
   def emergencyTokens: EmergencyTokens
 
-  lazy val io: ActorRef = IO(Http)
-  val filterHeaders: HttpResponse => HttpResponse = resp =>
-    resp.withHeaders(resp.headers.filter {
-      case Date(_) | `Content-Type`(_) | Server(_) | `Content-Length`(_) => false
-      case _ => true
-    })
-
-  def connectorFromUrl(proxyUri: Uri) = {
-    HostConnectorSetup(proxyUri.authority.host.address, proxyUri.effectivePort, sslEncryption = proxyUri.scheme.toLowerCase().equals("https"))
-  }
-
-  def createProxyRequest(in: HttpRequest, proxyUri: Uri) = {
-    val (proxyScheme, proxyHost, proxyPort, _) = {
-      (proxyUri.scheme, proxyUri.authority.host.address, proxyUri.effectivePort, proxyUri.path)
-    }
-    in.copy(
-      uri = in.uri.withHost(proxyHost).withPort(proxyPort).withScheme(proxyScheme),
-      headers = in.headers.map {
-        case Host(_, _) => Host(proxyHost)
-        case header => header
-      }.filter {
-        case `Content-Type`(_) => false
-        case `Content-Length`(_) => false
-        case _ => true
-      }
-    )
-  }
-
   val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
   val authRouteExpiryDateHistogram = new Histogram("authRouteExpiryDate", 1, DAYS) // what variance of dates?
 
