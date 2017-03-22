@@ -144,6 +144,22 @@
                             "Resource": ["arn:aws:logs:*:*:*"]
                         }]
                     }
+                },//TODO check that this policy is enough
+                {
+                    "PolicyName": "dynamoTable",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "dynamodb:GetItem",
+                                    "dynamodb:PutItem"
+                                ],
+                                "Resource": "arn:aws:dynamodb:eu-west-1:865473395570:table/cas-auth-PROD"
+                            }
+                        ]
+                    }
                 },
                 {
                     "PolicyName": "PushMetrics",
@@ -230,7 +246,6 @@
                 "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
             }
         },
-        //TODO CHECK IF THIS IS CORRECT AND ADD ONE FOR PROD
         "CASAuthTable": {
             "Type": "AWS::DynamoDB::Table",
             "Properties": {
@@ -255,10 +270,10 @@
                     }
                 ],
                 "ProvisionedThroughput": {
-                    "ReadCapacityUnits": "1",
+                    "ReadCapacityUnits": "1", //TODO what should these values be
                     "WriteCapacityUnits": "1"
                 },
-                "TableName": "cas-auth-DEV"
+                "TableName": "cas-auth-PROD"
             }
         }
     },
