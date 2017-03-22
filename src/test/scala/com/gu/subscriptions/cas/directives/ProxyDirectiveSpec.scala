@@ -9,7 +9,7 @@ import com.gu.memsub.subsv2.{PaidCharge, PaidSubscriptionPlan, PaperCharges, Rea
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model._
 import com.gu.subscriptions.cas.service.api._
-import org.joda.time.{DateTime, Days, Weeks}
+import org.joda.time.{DateTime, Days, ReadablePeriod, Weeks}
 import org.scalatest.FreeSpec
 import spray.http.MediaTypes.`application/json`
 import spray.http.StatusCodes.BadRequest
@@ -30,7 +30,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       case ("existingApp", "existingDevice") => Future.successful(Success(Some(aWeekFromNow)))
       case _ => Future.successful(Success(None))
     }
-    override def setExpiration(appId: String, deviceId: String, expiration: DateTime): Future[SetExpirationResponse] = Future.successful(Success)
+    override def setExpiration(appId: String, deviceId: String, expiration: DateTime, timeToLive: ReadablePeriod): Future[SetExpirationResponse] = Future.successful(Success)
   }
 
   def actorRefFactory = system
