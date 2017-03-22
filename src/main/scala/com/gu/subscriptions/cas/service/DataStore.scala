@@ -1,8 +1,9 @@
 package com.gu.subscriptions.cas.service
 
+import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.dynamodbv2.{AmazonDynamoDBAsyncClientBuilder, AmazonDynamoDBClientBuilder}
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder
 import com.gu.scanamo.DynamoFormat
 import com.gu.subscriptions.cas.service.api.{Error, GetExpirationResponse, SetExpirationResponse, Success}
 import org.joda.time.{DateTime, DateTimeZone}
@@ -14,14 +15,16 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
 
-
-
   case class AuthItem(appId: String, deviceId: String, expiryDate: DateTime)
 
+  private lazy val credentialsProvider = new AWSCredentialsProviderChain(
+    new ProfileCredentialsProvider("membership"),
+    new DefaultAWSCredentialsProviderChain()
+  )
 
   val dynamoClient = AmazonDynamoDBAsyncClientBuilder.standard()
     .withRegion(Regions.EU_WEST_1)
-    .withCredentials(new ProfileCredentialsProvider("membership"))
+    .withCredentials(credentialsProvider)
     .build()
 
   implicit val jodaStringFormat = DynamoFormat.coercedXmap[DateTime, String, IllegalArgumentException](
