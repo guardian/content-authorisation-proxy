@@ -254,6 +254,37 @@
             "Properties": {
                 "AttributeDefinitions": [
                     {
+                        "AttributeName": "deviceId",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "appId",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "deviceId",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "appId",
+                        "KeyType": "RANGE"
+                    }
+                ],
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "100",
+                    "WriteCapacityUnits": "100"
+                },
+                "TableName": "cas-auth-PROD"
+            }
+        },
+        "CASAuthTableDev": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+
+                    {
                         "AttributeName": "appId",
                         "AttributeType": "S"
                     },
@@ -264,19 +295,20 @@
                 ],
                 "KeySchema": [
                     {
-                        "AttributeName": "appId",
+                        "AttributeName": "deviceId",
                         "KeyType": "HASH"
                     },
                     {
-                        "AttributeName": "deviceId",
+                        "AttributeName": "appId",
                         "KeyType": "RANGE"
                     }
+
                 ],
                 "ProvisionedThroughput": {
-                    "ReadCapacityUnits": "100",
-                    "WriteCapacityUnits": "100"
+                    "ReadCapacityUnits": "1",
+                    "WriteCapacityUnits": "1"
                 },
-                "TableName": "cas-auth-PROD"
+                "TableName": "cas-auth-DEV"
             }
         }
     },
