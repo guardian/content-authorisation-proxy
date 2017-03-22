@@ -6,7 +6,7 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder
 import com.gu.scanamo.DynamoFormat
 import com.gu.subscriptions.cas.service.api.{Error, GetExpirationResponse, SetExpirationResponse, Success}
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.{DateTime, DateTimeZone, ReadablePeriod}
 import com.gu.scanamo._
 import com.gu.scanamo.syntax._
 import com.gu.subscriptions.cas.config.Configuration
@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
 
-  case class AuthItem(appId: String, deviceId: String, expiryDate: DateTime)
+  case class AuthItem(appId: String, deviceId: String, expiryDate: DateTime, ttlTimestamp: Option[Long])
 
   private lazy val credentialsProvider = new AWSCredentialsProviderChain(
     new ProfileCredentialsProvider("membership"),
@@ -46,8 +46,11 @@ class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
     }
   }
 
-  override def setExpiration(appId: String, deviceId: String, expiration: DateTime): Future[SetExpirationResponse] = {
-    val newItem = AuthItem(appId, deviceId, expiration)
+  override def setExpiration(appId: String, deviceId: String, expiration: DateTime, timeToLive: ReadablePeriod): Future[SetExpirationResponse] = {
+
+    val ttlTimestamp = DateTime.now.plus(timeToLive).getMillis
+    val newItem = AuthItem(appId, deviceId, expiration, Some(ttlTimestamp))
+
     ScanamoAsync.exec(dynamoClient)(authTable.put(newItem)).map(a => api.Success)
   }
 }

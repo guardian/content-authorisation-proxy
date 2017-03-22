@@ -13,7 +13,7 @@ import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.monitoring.Histogram
 import com.gu.subscriptions.cas.service.api.{DataStore, Error, SubscriptionService, Success => SuccessResponse}
 import com.typesafe.scalalogging.LazyLogging
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, Years}
 import spray.httpx.SprayJsonSupport._
 import spray.httpx.marshalling.ToResponseMarshallable
 import spray.routing.{Directives, Route}
@@ -47,7 +47,12 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
               case SuccessResponse(None) =>
                 val newExpiryDate = DateTime.now.plusWeeks(2)
-                dataStore.setExpiration(appId, deviceId, newExpiryDate)
+                dataStore.setExpiration(
+                  appId = appId,
+                  deviceId = deviceId,
+                  expiration = newExpiryDate,
+                  timeToLive = Years.ONE
+                )
                 AuthResponse(newExpiryDate)
 
               case Error(message) =>

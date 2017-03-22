@@ -1,6 +1,6 @@
 package com.gu.subscriptions.cas.service.api
 
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, ReadablePeriod}
 
 import scala.concurrent.Future
 
@@ -19,5 +19,5 @@ object Success extends SetExpirationResponse
 trait DataStore {
   def getExpiration(appId: String, deviceId: String): Future[GetExpirationResponse]
 
-  def setExpiration(appId: String, deviceId: String, expiration: DateTime): Future[SetExpirationResponse]
+  def setExpiration(appId: String, deviceId: String, expiration: DateTime, timeToLive: ReadablePeriod): Future[SetExpirationResponse]
 }
