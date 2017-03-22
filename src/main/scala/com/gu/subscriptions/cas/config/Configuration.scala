@@ -17,7 +17,7 @@ object Configuration {
 
   val stage = appConfig.getString("stage")
 
-  val dynamoAuthTableNAme = appConfig.getString("dynamo.auth.table")
+  val dynamoAuthTableName = appConfig.getString("dynamo.auth.table")
 
   val sentryDsn = Try(appConfig.getString("sentry.dsn"))
 

@@ -33,7 +33,7 @@ class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
     _.withZone(DateTimeZone.UTC).toString
   )
 
-  val authTable = Table[AuthItem](Configuration.dynamoAuthTableNAme)
+  val authTable = Table[AuthItem](Configuration.dynamoAuthTableName)
 
   override def getExpiration(appId: String, deviceId: String): Future[GetExpirationResponse] = {
 
