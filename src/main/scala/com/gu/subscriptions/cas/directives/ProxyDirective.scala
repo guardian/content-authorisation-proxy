@@ -1,39 +1,27 @@
 package com.gu.subscriptions.cas.directives
 
-import akka.actor.{ActorRef, ActorSystem}
-import akka.io.IO
-import akka.pattern.ask
+import akka.actor.ActorSystem
 import akka.util.Timeout
+import com.gu.cas._
 import com.gu.memsub.Subscription.Name
 import com.gu.memsub.subsv2.Subscription
 import com.gu.memsub.subsv2.SubscriptionPlan.Paid
 import com.gu.subscriptions.cas.config.Configuration
-import com.gu.subscriptions.cas.config.HostnameVerifyingClientSSLEngineProvider.provider
-import com.gu.subscriptions.cas.directives.ResponseCodeTransformer._
 import com.gu.subscriptions.cas.directives.ZuoraDirective._
-import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
 import com.gu.subscriptions.cas.model._
-import com.gu.subscriptions.cas.monitoring.{Histogram, RequestMetrics, StatusMetrics}
-import com.gu.subscriptions.cas.service.api.{Error, SubscriptionService, Success => SuccessResponse}
+import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
+import com.gu.subscriptions.cas.monitoring.Histogram
+import com.gu.subscriptions.cas.service.api.{DataStore, Error, SubscriptionService, Success => SuccessResponse}
 import com.typesafe.scalalogging.LazyLogging
-import spray.can.Http
-import spray.can.Http.HostConnectorSetup
-import spray.http.HttpHeaders._
-import spray.http.{HttpRequest, HttpResponse, Uri}
-import spray.httpx.ResponseTransformation._
+import org.joda.time.DateTime
 import spray.httpx.SprayJsonSupport._
+import spray.httpx.marshalling.ToResponseMarshallable
 import spray.routing.{Directives, Route}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import com.gu.cas.{PayloadResult, _}
-import com.gu.scanamo.error.DynamoReadError
-import com.gu.subscriptions.cas.service.DataStore
-import org.joda.time.{DateTime, DateTimeZone}
-import spray.httpx.marshalling.ToResponseMarshallable
-
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
@@ -45,14 +33,12 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   def emergencyTokens: EmergencyTokens
 
   val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
-  val authRouteExpiryDateHistogram = new Histogram("authRouteExpiryDate", 1, DAYS) // what variance of dates?
 
   val authRoute: Route = (path("auth") & post) {
-    entity(as[AuthorisationRequest]) { subsReq =>
-      subsReq.appId.foreach(authRouteAppIdHistogram.count)
-      subsReq.expiryDate.foreach(authRouteExpiryDateHistogram.count)
+    entity(as[AuthorisationRequest]) { authReq =>
+      authReq.appId.foreach(authRouteAppIdHistogram.count)
 
-      (subsReq.deviceId, subsReq.appId) match {
+      (authReq.deviceId, authReq.appId) match {
         case (Some(deviceId), Some(appId)) =>
 
           val expiryResponse: Future[ToResponseMarshallable] = dataStore.getExpiration(appId = appId, deviceId = deviceId).map { getResponse =>
