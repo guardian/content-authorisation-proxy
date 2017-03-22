@@ -273,8 +273,8 @@
                     }
                 ],
                 "ProvisionedThroughput": {
-                    "ReadCapacityUnits": "1", //TODO what should these values be
-                    "WriteCapacityUnits": "1"
+                    "ReadCapacityUnits": "100",
+                    "WriteCapacityUnits": "100"
                 },
                 "TableName": "cas-auth-PROD"
             }
