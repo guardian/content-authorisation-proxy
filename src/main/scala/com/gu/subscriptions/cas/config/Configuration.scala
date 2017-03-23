@@ -13,15 +13,13 @@ object Configuration {
 
   val appConfig = ConfigFactory.load()
 
-  val EXPECTED_FIELDS = List("proxy")
+  val EXPECTED_FIELDS = List("dynamo.auth.table")
 
   val stage = appConfig.getString("stage")
 
   val dynamoAuthTableName = appConfig.getString("dynamo.auth.table")
 
   val sentryDsn = Try(appConfig.getString("sentry.dsn"))
-
-  val proxy = appConfig.getString("proxy")
 
   val nullSettings = EXPECTED_FIELDS.filter(appConfig.getString(_) == null)
 

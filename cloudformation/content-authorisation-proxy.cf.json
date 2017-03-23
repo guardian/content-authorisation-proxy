@@ -39,6 +39,30 @@
             "Type": "String"
         }
     },
+
+    "Mappings" : {
+        "StageVariables" : {
+            "CODE" : {
+                "authReadCapacityUnits" : 1,
+                "authWriteCapacityUnits" : 1,
+                "MaxInstances": 2,
+                "MinInstances": 1,
+                "HostedZone" : "subscriptions.guardianapis.com.",
+                "DomainName" :  "cas-code.subscriptions.guardianapis.com.",
+                "TouchpointBackend" : "DEV"
+            },
+            "PROD" : {
+                "authReadCapacityUnits" : 100,
+                "authWriteCapacityUnits" : 100,
+                "MaxInstances": 3,
+                "MinInstances": 6,
+                "HostedZone" : "subscriptions.guardianapis.com.",
+                "DomainName" :  "cas-prod.subscriptions.guardianapis.com.",
+                "TouchpointBackend" : "PROD"
+            }
+        }
+    },
+
     "Resources" : {
 
         "CASProxyAutoScalingGroup" : {
@@ -47,8 +71,8 @@
                 "AvailabilityZones" : { "Fn::GetAZs" : "" },
                 "VPCZoneIdentifier" : { "Ref" : "Subnets" },
                 "LaunchConfigurationName" : { "Ref" : "CASProxyLaunchConfig" },
-                "MinSize" : "3",
-                "MaxSize" : "6",
+                "MinSize": {"Fn::FindInMap": ["StageVariables", { "Ref": "Stage" }, "MinInstances" ]},
+                "MaxSize": {"Fn::FindInMap": ["StageVariables", { "Ref": "Stage" }, "MaxInstances" ]},
                 "LoadBalancerNames" : [ { "Ref" : "CASProxyElasticLoadBalancer" } ],
                 "HealthCheckType" : "ELB",
                 "HealthCheckGracePeriod" : 300,
@@ -99,7 +123,7 @@
 
                         {"Fn::Join": [" ", ["python awslogs-agent-setup.py -nr", { "Ref": "AWS::Region" }, "-c $CONF_DIR/logger.conf" ]]},
 
-                        {"Fn::Join":["", ["sed 's/__STAGE/", { "Ref" : "Stage" } ,"/' $CONF_DIR/upstart.conf > /etc/init/content-authorisation-proxy-app.conf"]]},
+                        {"Fn::Join":["", ["sed 's/__STAGE/", { "Fn::FindInMap": ["StageVariables", { "Ref": "Stage" }, "TouchpointBackend" ]} ,"/' $CONF_DIR/upstart.conf > /etc/init/content-authorisation-proxy-app.conf"]]},
 
                         "chown -R subscriptions /subscriptions/",
 
@@ -159,7 +183,7 @@
                                     "dynamodb:DeleteItem",
                                     "dynamodb:BatchGetItem"
                                 ],
-                                "Resource": "arn:aws:dynamodb:eu-west-1:865473395570:table/cas-auth-PROD"
+                                "Resource": { "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/cas-auth-${Stage}"}
                             }
                         ]
                     }
@@ -241,9 +265,9 @@
         "CASProxyELBDNSrecord" : {
             "Type" : "AWS::Route53::RecordSet",
             "Properties" : {
-                "HostedZoneName" : "subscriptions.guardianapis.com.",
+                "HostedZoneName" : {"Fn::FindInMap": ["StageVariables", { "Ref": "Stage" }, "HostedZone" ]},
+                "Name" : {"Fn::FindInMap": ["StageVariables", { "Ref": "Stage" }, "DomainName" ]},
                 "Comment" : "CNAME for AWS ELB",
-                "Name" :  "cas-proxy.subscriptions.guardianapis.com.",
                 "Type" : "CNAME",
                 "TTL" : "120",
                 "ResourceRecords" : [ {"Fn::GetAtt":["CASProxyElasticLoadBalancer","DNSName"]} ]
@@ -273,42 +297,10 @@
                     }
                 ],
                 "ProvisionedThroughput": {
-                    "ReadCapacityUnits": "100",
-                    "WriteCapacityUnits": "100"
+                    "ReadCapacityUnits": { "Fn::FindInMap": ["StageVariables", { "Ref": "Stage" }, "authReadCapacityUnits" ]},
+                    "WriteCapacityUnits":{ "Fn::FindInMap": ["StageVariables", { "Ref": "Stage" }, "authWriteCapacityUnits" ]}
                 },
-                "TableName": "cas-auth-PROD"
-            }
-        },
-        "CASAuthTableDev": {
-            "Type": "AWS::DynamoDB::Table",
-            "Properties": {
-                "AttributeDefinitions": [
-
-                    {
-                        "AttributeName": "appId",
-                        "AttributeType": "S"
-                    },
-                    {
-                        "AttributeName": "deviceId",
-                        "AttributeType": "S"
-                    }
-                ],
-                "KeySchema": [
-                    {
-                        "AttributeName": "deviceId",
-                        "KeyType": "HASH"
-                    },
-                    {
-                        "AttributeName": "appId",
-                        "KeyType": "RANGE"
-                    }
-
-                ],
-                "ProvisionedThroughput": {
-                    "ReadCapacityUnits": "1",
-                    "WriteCapacityUnits": "1"
-                },
-                "TableName": "cas-auth-DEV"
+                "TableName": {"Fn::Join": ["", ["cas-auth-", {"Ref": "Stage"}]]}
             }
         }
     },
