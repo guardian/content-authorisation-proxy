@@ -52,8 +52,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
                   deviceId = deviceId,
                   expiration = newExpiryDate,
                   timeToLive = Years.ONE
-                )
-                AuthResponse(newExpiryDate)
+                ).map(_ => AuthResponse(newExpiryDate))
 
               case Error(message) =>
                 logger.error(s"dynamo db error for appId :$appId, deviceId: $deviceId, error message: $message")
