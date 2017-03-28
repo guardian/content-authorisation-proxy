@@ -37,22 +37,25 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   val authRoute: Route = (path("auth") & post) {
     entity(as[AuthorisationRequest]) { authReq =>
       authReq.appId.foreach(authRouteAppIdHistogram.count)
-
+      logger.info("auth endpoint reached!!")
       (authReq.deviceId, authReq.appId) match {
         case (Some(deviceId), Some(appId)) =>
+          logger.info(s"device id is $deviceId app id is $appId")
 
           val expiryResponse: Future[ToResponseMarshallable] = dataStore.getExpiration(appId = appId, deviceId = deviceId).map { getResponse =>
+            logger.info(s"expiry response is $getResponse")
             getResponse match {
               case SuccessResponse(Some(expirationDate)) => AuthResponse(expirationDate)
 
               case SuccessResponse(None) =>
                 val newExpiryDate = DateTime.now.plusWeeks(2)
+                logger.info(s"setting new expiration to  $newExpiryDate")
                 dataStore.setExpiration(
                   appId = appId,
                   deviceId = deviceId,
                   expiration = newExpiryDate,
-                  timeToLive = Years.ONE
-                )
+                  timeToLive = Years.ONE)
+                logger.info(s"response is this")
                 AuthResponse(newExpiryDate)
 
               case Error(message) =>

@@ -10,10 +10,11 @@ import org.joda.time.{DateTime, DateTimeZone, ReadablePeriod}
 import com.gu.scanamo._
 import com.gu.scanamo.syntax._
 import com.gu.subscriptions.cas.config.Configuration
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
+class DataStore(implicit ec: ExecutionContext) extends api.DataStore with LazyLogging {
 
   case class AuthItem(appId: String, deviceId: String, expiryDate: DateTime, ttlTimestamp: Option[Long])
 
@@ -51,6 +52,9 @@ class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
     val ttlTimestamp = DateTime.now.plus(timeToLive).getMillis
     val newItem = AuthItem(appId, deviceId, expiration, Some(ttlTimestamp))
 
-    ScanamoAsync.exec(dynamoClient)(authTable.put(newItem)).map(a => api.Success)
+    ScanamoAsync.exec(dynamoClient)(authTable.put(newItem)).map{
+      a =>
+        logger.info(s"response from dynamo set expiration is $a")
+        api.Success}
   }
 }
