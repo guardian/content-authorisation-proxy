@@ -35,7 +35,6 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
 
   val authRoute: Route = (path("auth") & post) {
-    logger.info("auth endpoint reached!!")
     entity(as[AuthorisationRequest]) { authReq =>
       logger.info(s"auth req is $authReq")
       authReq.appId.foreach(authRouteAppIdHistogram.count)
@@ -51,13 +50,15 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
               case SuccessResponse(None) =>
                 val newExpiryDate = DateTime.now.plusWeeks(2)
                 logger.info(s"setting new expiration to  $newExpiryDate")
-                dataStore.setExpiration(
+                val expirationResponse = dataStore.setExpiration(
                   appId = appId,
                   deviceId = deviceId,
                   expiration = newExpiryDate,
                   timeToLive = Years.ONE)
-                logger.info(s"response is this")
-                AuthResponse(newExpiryDate)
+
+                expirationResponse.map{res=>
+                  logger.info(s"response is $res")
+                  AuthResponse(newExpiryDate)}
 
               case Error(message) =>
                 logger.error(s"dynamo db error for appId :$appId, deviceId: $deviceId, error message: $message")
