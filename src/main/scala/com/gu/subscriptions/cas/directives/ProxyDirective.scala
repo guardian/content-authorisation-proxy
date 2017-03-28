@@ -35,9 +35,10 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
   val authRouteAppIdHistogram = new Histogram("authRouteAppIdHistogram", 1, DAYS) // how many app types?
 
   val authRoute: Route = (path("auth") & post) {
+    logger.info("auth endpoint reached!!")
     entity(as[AuthorisationRequest]) { authReq =>
+      logger.info(s"auth req is $authReq")
       authReq.appId.foreach(authRouteAppIdHistogram.count)
-      logger.info("auth endpoint reached!!")
       (authReq.deviceId, authReq.appId) match {
         case (Some(deviceId), Some(appId)) =>
           logger.info(s"device id is $deviceId app id is $appId")
