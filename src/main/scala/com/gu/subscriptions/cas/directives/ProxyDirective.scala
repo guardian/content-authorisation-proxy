@@ -66,7 +66,15 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
             }
           }
 
-          complete(expiryResponse)
+          expiryResponse.onFailure {
+            case t: Throwable =>
+              logger.error(s"error during auth ${t.getMessage} device: $deviceId appid  $appId")
+              throw t
+          }
+
+          onSuccess(expiryResponse) {case res: ToResponseMarshallable => complete(res)}
+
+//            complete(expiryResponse)
 
         case _ => badRequest
       }
