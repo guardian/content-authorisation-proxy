@@ -1,7 +1,7 @@
 package com.gu.subscriptions.cas.service
 
 import com.github.nscala_time.time.Imports._
-import com.gu.memsub.Digipack
+import com.gu.memsub.Benefit.Digipack
 import com.gu.memsub.Subscription.Name
 import com.gu.memsub.subsv2.SubscriptionPlan.Paid
 import com.gu.memsub.subsv2.reads.ChargeListReads._
@@ -31,8 +31,9 @@ class SubscriptionService(zuoraService: ZuoraService,
       if (allPlanBenefits.contains(Digipack)) {
         for {
           account <- zuoraService.getAccount(subscription.accountId)
-          contact <- zuoraService.getContact(account.billToId)
-        } yield contact.matchesPassword(password)
+          billToContactMatches <- zuoraService.getContact(account.billToId).map(_.matchesPassword(password))
+          valid <- if (billToContactMatches) Future(true) else zuoraService.getContact(account.soldToId).map(_.matchesPassword(password))
+        } yield valid
       } else {
         Future.successful(false)
       }

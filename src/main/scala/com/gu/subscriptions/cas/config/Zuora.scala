@@ -1,7 +1,6 @@
 package com.gu.subscriptions.cas.config
 
-import com.amazonaws.regions.{Region, Regions}
-import com.gu.monitoring.{CloudWatch, ServiceMetrics}
+import com.gu.monitoring.ServiceMetrics
 import com.gu.okhttp.RequestRunners._
 import com.gu.subscriptions.cas.config.Configuration.{appName, touchpointConfig, stage => appStage}
 import com.gu.zuora.{ZuoraApiConfig, rest, soap}
@@ -26,11 +25,5 @@ object Zuora {
     val apiConfig = ZuoraApiConfig.rest(touchpointConfig, appStage)
     val metrics = new ServiceMetrics(appStage, appName, "zuora-rest-client")
     val simpleClient = new rest.SimpleClient[Future](apiConfig, futureRunner)
-  }
-
-  val cloudWatch = new CloudWatch {
-    override val application: String = appName
-    override val service: String = "ZuoraSubscriptionService"
-    override val stage: String = Configuration.stage
   }
 }

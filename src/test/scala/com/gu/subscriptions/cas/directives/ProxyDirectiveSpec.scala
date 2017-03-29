@@ -2,8 +2,9 @@ package com.gu.subscriptions.cas.directives
 
 import com.gu.cas._
 import com.gu.i18n.Currency.GBP
-import com.gu.memsub.Subscription.{Name, ProductRatePlanId, RatePlanId}
+import com.gu.memsub.Subscription.{Name, ProductRatePlanChargeId, ProductRatePlanId, RatePlanId}
 import com.gu.memsub._
+import com.gu.memsub.Benefit._
 import com.gu.memsub.subsv2.SubscriptionPlan.{Digipack, Paid}
 import com.gu.memsub.subsv2.{PaidCharge, PaidSubscriptionPlan, PaperCharges, ReaderType}
 import com.gu.subscriptions.cas.model.json.ModelJsonProtocol._
@@ -59,7 +60,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       productName = "Digital Pack",
       product = Product.Digipack,
       features = List.empty,
-      charges = PaidCharge(Digipack, BillingPeriod.Year, PricingSummary(Map(GBP -> Price(119.90f, GBP)))),
+      charges = PaidCharge(Digipack, BillingPeriod.Year, PricingSummary(Map(GBP -> Price(119.90f, GBP))), ProductRatePlanChargeId("foo")),
       chargedThrough = Some(today),
       start = today,
       end = today.plusYears(1)
@@ -86,7 +87,7 @@ class ProxyDirectiveSpec extends FreeSpec with ScalatestRouteTest with ProxyDire
       name = Subscription.Name(subsName),
       accountId = Subscription.AccountId("a123"),
       startDate = today,
-      firstPaymentDate = today,
+      acceptanceDate = today.plusDays(14), // 14 days free trial
       termStartDate = today,
       termEndDate = today.plusYears(1),
       casActivationDate = None,
