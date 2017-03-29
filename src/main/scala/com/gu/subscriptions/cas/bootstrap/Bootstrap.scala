@@ -8,7 +8,7 @@ import com.gu.memsub.subsv2.services.{CatalogService, SubscriptionService => Com
 import com.gu.monitoring.ServiceMetrics
 import com.gu.subscriptions.cas.config.Configuration.{appName, productIds, stage, system}
 import com.gu.subscriptions.cas.config.Zuora.{Rest, Soap}
-import com.gu.subscriptions.cas.service.SubscriptionService
+import com.gu.subscriptions.cas.service.{DataStore, SubscriptionService}
 import com.gu.zuora.ZuoraService
 import org.joda.time.LocalDate
 import spray.can.Http
@@ -32,7 +32,8 @@ object Bootstrap extends App {
   private val map = this.catalogService.catalog.map(_.fold[CatalogMap](error => {println(s"error: ${error.list.mkString}"); Map()}, _.map))
   val commonSubscriptionService = new CommonSubscriptionService[Future](newProductIds, map, Rest.simpleClient, zuoraService.getAccountIds)
   val subscriptionService = new SubscriptionService(zuoraService, commonSubscriptionService)
-  val service = system.actorOf(Props(classOf[CASService], subscriptionService))
+  val dataStore = new DataStore
+  val service = system.actorOf(Props(classOf[CASService], subscriptionService, dataStore))
 
   implicit val timeout = Timeout(5.seconds)
 

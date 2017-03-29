@@ -25,13 +25,14 @@ trait ErrorRoute {
         entity = errorMsg("Unknown subscriber", unknownSubscriberErrorCode)
       )
     )
+  val serverErrorResponse = HttpResponse(
+    status = StatusCodes.InternalServerError,
+    entity = errorMsg("Internal server error", generalErrorCode)
+  )
 
   val serverError: Route =
     complete(
-      HttpResponse(
-        status = StatusCodes.InternalServerError,
-        entity = errorMsg("Internal server error", generalErrorCode)
-      )
+    serverErrorResponse
     )
 
   val serviceUnavailableError: Route =

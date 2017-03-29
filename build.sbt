@@ -35,6 +35,7 @@ libraryDependencies ++= {
     "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.10.50",
     "com.gu" %% "membership-common" % "0.360",
     "com.gu" %% "content-authorisation-common" % "0.1",
+    "com.gu" %% "scanamo" % "0.9.2",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   )
 }
