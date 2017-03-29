@@ -54,8 +54,8 @@
             "PROD" : {
                 "authReadCapacityUnits" : 100,
                 "authWriteCapacityUnits" : 100,
-                "MaxInstances": 3,
-                "MinInstances": 6,
+                "MaxInstances": 6,
+                "MinInstances": 3,
                 "HostedZone" : "subscriptions.guardianapis.com.",
                 "DomainName" :  "cas-prod.subscriptions.guardianapis.com.",
                 "TouchpointBackend" : "PROD"
