@@ -46,7 +46,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
               case SuccessResponse(Some(expirationDate)) => AuthResponse(expirationDate)
 
               case SuccessResponse(None) =>
-                val newExpiryDate = DateTime.now.plusWeeks(2)
+                val newExpiryDate = DateTime.now.toLocalDate.plusWeeks(2)
                 dataStore.setExpiration(
                   appId = appId,
                   deviceId = deviceId,

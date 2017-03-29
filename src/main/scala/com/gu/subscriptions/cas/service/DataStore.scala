@@ -6,7 +6,7 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder
 import com.gu.scanamo.DynamoFormat
 import com.gu.subscriptions.cas.service.api.{Error, GetExpirationResponse, SetExpirationResponse, Success}
-import org.joda.time.{DateTime, DateTimeZone, ReadablePeriod}
+import org.joda.time.{DateTime, DateTimeZone, LocalDate, ReadablePeriod}
 import com.gu.scanamo._
 import com.gu.scanamo.syntax._
 import com.gu.subscriptions.cas.config.Configuration
@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
 
-  case class AuthItem(appId: String, deviceId: String, expiryDate: DateTime, ttlTimestamp: Option[Long])
+  case class AuthItem(appId: String, deviceId: String, expiryDate: LocalDate, ttlTimestamp: Option[Long])
 
   private lazy val credentialsProvider = new AWSCredentialsProviderChain(
     new ProfileCredentialsProvider("membership"),
@@ -27,10 +27,10 @@ class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
     .withCredentials(credentialsProvider)
     .build()
 
-  implicit val jodaStringFormat = DynamoFormat.coercedXmap[DateTime, String, IllegalArgumentException](
-    DateTime.parse(_).withZone(DateTimeZone.UTC)
+  implicit val jodaStringFormat = DynamoFormat.coercedXmap[LocalDate, String, IllegalArgumentException](
+    LocalDate.parse(_)
   )(
-    _.withZone(DateTimeZone.UTC).toString
+    _.toString
   )
 
   val authTable = Table[AuthItem](Configuration.dynamoAuthTableName)
@@ -46,7 +46,7 @@ class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
     }
   }
 
-  override def setExpiration(appId: String, deviceId: String, expiration: DateTime, timeToLive: ReadablePeriod): Future[SetExpirationResponse] = {
+  override def setExpiration(appId: String, deviceId: String, expiration: LocalDate, timeToLive: ReadablePeriod): Future[SetExpirationResponse] = {
 
     val ttlTimestamp = DateTime.now.plus(timeToLive).getMillis
     val newItem = AuthItem(appId, deviceId, expiration, Some(ttlTimestamp))
