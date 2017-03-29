@@ -64,7 +64,7 @@ trait ProxyDirective extends Directives with ErrorRoute with LazyLogging {
 
         case _ => badRequest
       }
-    }
+    } ~ badRequest
   }
 
 
