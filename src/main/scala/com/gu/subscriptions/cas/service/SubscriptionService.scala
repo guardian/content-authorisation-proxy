@@ -32,7 +32,7 @@ class SubscriptionService(zuoraService: ZuoraService,
         for {
           account <- zuoraService.getAccount(subscription.accountId)
           billToContactMatches <- zuoraService.getContact(account.billToId).map(_.matchesPassword(password))
-          valid <- if (billToContactMatches) Future(true) else zuoraService.getContact(account.soldToId).map(_.matchesPassword(password))
+          valid <- if (billToContactMatches) Future.successful(true) else zuoraService.getContact(account.soldToId).map(_.matchesPassword(password))
         } yield valid
       } else {
         Future.successful(false)
