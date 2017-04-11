@@ -48,7 +48,7 @@ class DataStore(implicit ec: ExecutionContext) extends api.DataStore {
 
   override def setExpiration(appId: String, deviceId: String, expiration: LocalDate, timeToLive: ReadablePeriod): Future[SetExpirationResponse] = {
 
-    val ttlTimestamp = DateTime.now.plus(timeToLive).getMillis
+    val ttlTimestamp = DateTime.now.plus(timeToLive).getMillis / 1000
     val newItem = AuthItem(appId, deviceId, expiration, Some(ttlTimestamp))
 
     ScanamoAsync.exec(dynamoClient)(authTable.put(newItem)).map(a => api.Success)
