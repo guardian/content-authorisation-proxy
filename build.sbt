@@ -42,7 +42,7 @@ libraryDependencies ++= {
 lazy val root = (project in file(".")).enablePlugins(
   BuildInfoPlugin,
   RiffRaffArtifact,
-  SbtNativePackager,
+  JDebPackaging,
   JavaAppPackaging
 ).settings(
   buildInfoKeys := Seq[BuildInfoKey](
@@ -59,7 +59,25 @@ lazy val root = (project in file(".")).enablePlugins(
 
 mappings in Universal ++= NativePackagerHelper.contentOf("cloudformation/resources")
 
-riffRaffPackageType := (packageBin in config("universal")).value
+import com.typesafe.sbt.packager.archetypes.ServerLoader.Systemd
+serverLoading in Debian := Systemd
+debianPackageDependencies := Seq("openjdk-8-jre-headless")
+javaOptions in Universal ++= Seq(
+      "-Dpidfile.path=/dev/null",
+      "-J-XX:MaxRAMFraction=2",
+      "-J-XX:InitialRAMFraction=2",
+      "-J-XX:MaxMetaspaceSize=500m",
+      "-J-XX:+PrintGCDetails",
+      "-J-XX:+PrintGCDateStamps",
+      "-Dscala.concurrent.context.maxThreads=64",
+      "-Dscala.concurrent.context.numThreads=64",
+      s"-J-Xloggc:/var/log/${name.value}/gc.log"
+    )
+
+maintainer := "Membership Dev <membership.dev@theguardian.com>"
+packageSummary := "Content Authorization Proxy"
+packageDescription := """Content Authorization Proxy"""
+riffRaffPackageType := (packageBin in Debian).value
 
 addCommandAlias("devrun", "re-start")
 
