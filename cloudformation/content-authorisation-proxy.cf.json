@@ -97,7 +97,7 @@
                     "Fn::Join":["\n", [
                         "#!/bin/bash -ev",
 
-                        "CONF_DIR=/etc/content-authorization-proxy/conf",
+                        "CONF_DIR=/etc/content-authorisation-proxy/conf",
 
                         {"Fn::Join":["", ["wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/authorized_keys &"]]},
 
@@ -110,7 +110,7 @@
 
                         "dpkg -i /tmp/content-authorisation-proxy_0.1_all.deb",
 
-                        "chown content-authorization-proxy /etc/gu/cas-proxy.private.conf",
+                        "chown content-authorisation-proxy /etc/gu/cas-proxy.private.conf",
 
                         {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-private/", { "Ref" : "Stage" }, "/cas-proxy.private.conf /etc/gu"]]},
                         "chown subscriptions /etc/gu/cas-proxy.private.conf",
