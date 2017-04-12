@@ -80,5 +80,6 @@ packageDescription := """Content Authorization Proxy"""
 riffRaffPackageType := (packageBin in Debian).value
 
 addCommandAlias("devrun", "re-start")
+addCommandAlias("riffRaffArtifact", "riffRaffNotifyTeamcity")
 
 Revolver.settings
