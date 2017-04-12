@@ -1,6 +1,15 @@
 {
   "defaultStacks": ["subscriptions"],
   "packages":{
+      "ami-update": {
+        "type": "ami-cloudformation-parameter",
+        "apps": ["content-authorisation-proxy"],
+        "data": {
+            "amiTags": { "Recipe": "xenial-membership", "AmigoStage": "PROD" },
+                "amiParameter": "ImageId",
+                "cloudFormationStackByTags" : true
+            }
+      },
     "content-authorisation-proxy":{
       "type":"autoscaling",
       "data":{
