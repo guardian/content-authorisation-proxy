@@ -69,8 +69,6 @@ javaOptions in Universal ++= Seq(
       "-J-XX:MaxMetaspaceSize=500m",
       "-J-XX:+PrintGCDetails",
       "-J-XX:+PrintGCDateStamps",
-      "-Dscala.concurrent.context.maxThreads=64",
-      "-Dscala.concurrent.context.numThreads=64",
       s"-J-Xloggc:/var/log/${name.value}/gc.log"
     )
 
