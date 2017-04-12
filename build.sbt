@@ -41,10 +41,9 @@ libraryDependencies ++= {
 
 lazy val root = (project in file(".")).enablePlugins(
   BuildInfoPlugin,
-  JavaServerAppPackaging,
   RiffRaffArtifact,
   JDebPackaging,
-  JavaAppPackaging
+  JavaServerAppPackaging
 ).settings(
   buildInfoKeys := Seq[BuildInfoKey](
     name,
