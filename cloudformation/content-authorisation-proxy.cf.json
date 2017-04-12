@@ -97,7 +97,9 @@
                     "Fn::Join":["\n", [
                         "#!/bin/bash -ev",
 
-                        "CONF_DIR=/etc/content-authorisation-proxy/conf",
+                        "mkdir /etc/gu",
+
+                        "CONF_DIR=/etc/content-authorisation-proxy",
 
                         {"Fn::Join":["", ["wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/authorized_keys &"]]},
 
@@ -106,14 +108,13 @@
 
                         {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/content-authorisation-proxy_0.1_all.deb /tmp"]]},
 
-                        "mkdir /etc/gu",
+                        {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-private/", { "Ref" : "Stage" }, "/cas-proxy.private.conf /etc/gu"]]},
+
+
 
                         "dpkg -i /tmp/content-authorisation-proxy_0.1_all.deb",
 
                         "chown content-authorisation-proxy /etc/gu/cas-proxy.private.conf",
-
-                        {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-private/", { "Ref" : "Stage" }, "/cas-proxy.private.conf /etc/gu"]]},
-                        "chown subscriptions /etc/gu/cas-proxy.private.conf",
                         "chmod 0600 /etc/gu/cas-proxy.private.conf",
 
                         "wget https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py",
