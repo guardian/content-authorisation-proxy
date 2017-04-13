@@ -19,7 +19,7 @@
   },
   "recipes":{
     "default":{
-      "actionsBeforeApp": ["content-authorisation-proxy.uploadArtifacts", "content-authorisation-proxy.deploy"]
+      "actionsBeforeApp": ["ami-update.update", "content-authorisation-proxy.uploadArtifacts", "content-authorisation-proxy.deploy"]
     },
     "artifactUploadOnly": {
       "actions": [ "content-authorisation-proxy.uploadArtifacts" ]
