@@ -97,21 +97,24 @@
                     "Fn::Join":["\n", [
                         "#!/bin/bash -ev",
 
-                        "CONF_DIR=/subscriptions/content-authorisation-proxy-0.1/conf",
+                        "mkdir /etc/gu",
+
+                        "CONF_DIR=/etc/content-authorisation-proxy",
 
                         {"Fn::Join":["", ["wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/", { "Ref" : "Stack" }, "/authorized_keys &"]]},
 
                         "apt-get -y update",
                         "apt-get -y upgrade",
 
-                        {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/content-authorisation-proxy-0.1.zip /tmp"]]},
-                        "adduser --system --home /subscriptions --disabled-password subscriptions",
-                        "unzip -d /subscriptions /tmp/content-authorisation-proxy-0.1.zip",
-
-                        "mkdir /etc/gu",
+                        {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-dist/", { "Ref" : "Stack" }, "/", { "Ref" : "Stage" }, "/content-authorisation-proxy/content-authorisation-proxy_0.1_all.deb /tmp"]]},
 
                         {"Fn::Join":["", ["aws --region ", { "Ref": "AWS::Region" }, " s3 cp s3://subscriptions-private/", { "Ref" : "Stage" }, "/cas-proxy.private.conf /etc/gu"]]},
-                        "chown subscriptions /etc/gu/cas-proxy.private.conf",
+
+
+
+                        "dpkg -i /tmp/content-authorisation-proxy_0.1_all.deb",
+
+                        "chown content-authorisation-proxy /etc/gu/cas-proxy.private.conf",
                         "chmod 0600 /etc/gu/cas-proxy.private.conf",
 
                         "wget https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py",
@@ -123,11 +126,9 @@
 
                         {"Fn::Join": [" ", ["python awslogs-agent-setup.py -nr", { "Ref": "AWS::Region" }, "-c $CONF_DIR/logger.conf" ]]},
 
-                        {"Fn::Join":["", ["sed 's/__STAGE/", { "Fn::FindInMap": ["StageVariables", { "Ref": "Stage" }, "TouchpointBackend" ]} ,"/' $CONF_DIR/upstart.conf > /etc/init/content-authorisation-proxy-app.conf"]]},
+                        "systemctl enable awslogs",
 
-                        "chown -R subscriptions /subscriptions/",
-
-                        "start content-authorisation-proxy-app"
+                        "systemctl start awslogs"
                     ]]
                 }}
             }

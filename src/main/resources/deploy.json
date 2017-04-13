@@ -1,6 +1,15 @@
 {
   "defaultStacks": ["subscriptions"],
   "packages":{
+      "ami-update": {
+        "type": "ami-cloudformation-parameter",
+        "apps": ["content-authorisation-proxy"],
+        "data": {
+            "amiTags": { "Recipe": "xenial-membership", "AmigoStage": "PROD" },
+                "amiParameter": "ImageId",
+                "cloudFormationStackByTags" : true
+            }
+      },
     "content-authorisation-proxy":{
       "type":"autoscaling",
       "data":{
@@ -10,7 +19,7 @@
   },
   "recipes":{
     "default":{
-      "actionsBeforeApp": ["content-authorisation-proxy.uploadArtifacts", "content-authorisation-proxy.deploy"]
+      "actionsBeforeApp": ["ami-update.update", "content-authorisation-proxy.uploadArtifacts", "content-authorisation-proxy.deploy"]
     },
     "artifactUploadOnly": {
       "actions": [ "content-authorisation-proxy.uploadArtifacts" ]
