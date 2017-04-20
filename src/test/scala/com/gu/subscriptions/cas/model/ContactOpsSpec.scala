@@ -7,7 +7,7 @@ import ContactOps.WithMatchingPassword
 class ContactOpsSpec extends FlatSpec with Matchers {
   behavior of "ContactOps.matchesPassword"
 
-  def contact(postcode: String = "123") = Contact("id", "FirstName", "LastName", Some(postcode), None)
+  def contact(postcode: String = "123") = Contact("id", "FirstName", "LastName", Some(postcode), None, None)
 
   it should "ignore case of either arguments" in {
     contact("N1 9GU").matchesPassword("n1 9gu") should be(true)
