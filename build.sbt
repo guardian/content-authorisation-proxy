@@ -32,7 +32,7 @@ libraryDependencies ++= {
     "ch.qos.logback" % "logback-classic" % "1.1.2",
     "net.kencochrane.raven" % "raven-logback" % "6.0.0",
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
-    "com.gu" %% "membership-common" % "0.386",
+    "com.gu" %% "membership-common" % "0.394",
     "com.gu" %% "content-authorisation-common" % "0.1",
     "com.gu" %% "scanamo" % "0.9.2",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
