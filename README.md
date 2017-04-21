@@ -74,5 +74,5 @@ Sample response:
 ## Links
 
 * **Automated tests on Runscope:** https://www.runscope.com/radar/f862w29p8z5f/7ebb04c6-4b2d-4c25-a4d8-11d641faf2d2/overview
-* **TeamCity:** https://teamcity.gutools.co.uk/viewType.html?buildTypeId=Subscriptions_ContentAuthorisationProxy
+* **TeamCity:** https://teamcity.gutools.co.uk/viewType.html?buildTypeId=memsub_subscriptions_ContentAuthorisationProxy
 * **RiffRaff:** https://riffraff.gutools.co.uk/deployment/history?projectName=content-authorisation-proxy
