@@ -90,21 +90,21 @@ Resources:
         Fn::Sub:
         - |
          #!/bin/bash -ev
-          mkdir /etc/gu
-          CONF_DIR=/etc/content-authorisation-proxy
-          wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/${Stack}/authorized_keys &
-          apt-get -y update
-          apt-get -y upgrade
-          aws --region ${AWS::Region} s3 cp s3://subscriptions-dist/${Stack}/${Stage}/content-authorisation-proxy/content-authorisation-proxy_0.1_all.deb /tmp
-          aws --region ${AWS::Region} s3 cp s3://subscriptions-private/${Stage}/cas-proxy.private.conf /etc/gu
-          dpkg -i /tmp/content-authorisation-proxy_0.1_all.deb
-          chown content-authorisation-proxy /etc/gu/cas-proxy.private.conf
-          chmod 0600 /etc/gu/cas-proxy.private.conf
-          wget https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
-          sed -i -e "s/__DATE/$(date +%F)/" -e 's/__STAGE/${Stage}/' $CONF_DIR/logger.conf
-          python awslogs-agent-setup.py -nr ${AWS::Region} -c $CONF_DIR/logger.conf
-          systemctl enable awslogs
-          systemctl start awslogs
+         mkdir /etc/gu
+         CONF_DIR=/etc/content-authorisation-proxy
+         wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/${Stack}/authorized_keys &
+         apt-get -y update
+         apt-get -y upgrade
+         aws --region ${AWS::Region} s3 cp s3://subscriptions-dist/${Stack}/${Stage}/content-authorisation-proxy/content-authorisation-proxy_0.1_all.deb /tmp
+         aws --region ${AWS::Region} s3 cp s3://subscriptions-private/${Stage}/cas-proxy.private.conf /etc/gu
+         dpkg -i /tmp/content-authorisation-proxy_0.1_all.deb
+         chown content-authorisation-proxy /etc/gu/cas-proxy.private.conf
+         chmod 0600 /etc/gu/cas-proxy.private.conf
+         wget https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+         sed -i -e "s/__DATE/$(date +%F)/" -e 's/__STAGE/${Stage}/' $CONF_DIR/logger.conf
+         python awslogs-agent-setup.py -nr ${AWS::Region} -c $CONF_DIR/logger.conf
+         systemctl enable awslogs
+         systemctl start awslogs
         - {}
 
   SubscriptionsAppRole:
