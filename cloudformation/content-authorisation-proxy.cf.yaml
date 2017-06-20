@@ -46,8 +46,8 @@ Mappings:
       DomainName: cas-code.subscriptions.guardianapis.com.
       TouchpointBackend: DEV
     PROD:
-      authReadCapacityUnits: 100
-      authWriteCapacityUnits: 100
+      authReadCapacityUnits: 10
+      authWriteCapacityUnits: 2
       MaxInstances: 6
       MinInstances: 3
       HostedZone: subscriptions.guardianapis.com.
