@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: content-authorisation-proxy-app
+Parameters:
+  VpcId:
+    Type: String
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+    Default: vpc-e905ae8c
+  Subnets:
+    Type: CommaDelimitedList
+    Description: The list of SubnetIds in your Virtual Private Cloud (VPC)
+    Default: subnet-b3931cc4, subnet-fee4839b, subnet-cde44494
+  Stack:
+    Type: String
+    Description: Applied directly as a tag
+    Default: subscriptions
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instance
+    Type: String
+    Default: aws-subscriptions
+  Stage:
+    Type: String
+    Description: Applied directly as a tag
+    Default: PROD
+    AllowedValues:
+    - CODE
+    - PROD
+  InstanceType:
+    Type: String
+    Description: EC2 instance type
+    AllowedValues:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    ConstraintDescription: must be a valid EC2 instance type.
+  ImageId:
+    Description: AMI ID
+    Type: String
+Mappings:
+  StageVariables:
+    CODE:
+      authReadCapacityUnits: 1
+      authWriteCapacityUnits: 1
+      MaxInstances: 2
+      MinInstances: 1
+      HostedZone: subscriptions.guardianapis.com.
+      DomainName: cas-code.subscriptions.guardianapis.com.
+      TouchpointBackend: DEV
+    PROD:
+      authReadCapacityUnits: 10
+      authWriteCapacityUnits: 2
+      MaxInstances: 6
+      MinInstances: 3
+      HostedZone: subscriptions.guardianapis.com.
+      DomainName: cas-prod.subscriptions.guardianapis.com.
+      TouchpointBackend: PROD
+Resources:
+  CASProxyAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones: !GetAZs ''
+      VPCZoneIdentifier: !Ref 'Subnets'
+      LaunchConfigurationName: !Ref 'CASProxyLaunchConfig'
+      MinSize: !FindInMap [StageVariables, !Ref 'Stage', MinInstances]
+      MaxSize: !FindInMap [StageVariables, !Ref 'Stage', MaxInstances]
+      LoadBalancerNames:
+      - !Ref 'CASProxyElasticLoadBalancer'
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+      Tags:
+      - Key: Stack
+        Value: !Ref 'Stack'
+        PropagateAtLaunch: 'true'
+      - Key: App
+        Value: content-authorisation-proxy
+        PropagateAtLaunch: 'true'
+      - Key: Stage
+        Value: !Ref 'Stage'
+        PropagateAtLaunch: 'true'
+  CASProxyLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref 'ImageId'
+      SecurityGroups:
+      - !Ref 'InstanceSecurityGroup'
+      InstanceType: !Ref 'InstanceType'
+      KeyName: !Ref 'KeyName'
+      IamInstanceProfile: !Ref 'SubscriptionsAppInstanceProfile'
+      AssociatePublicIpAddress: true
+      UserData: !Base64
+        Fn::Sub:
+        - |
+         #!/bin/bash -ev
+         mkdir /etc/gu
+         CONF_DIR=/etc/content-authorisation-proxy
+         wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/${Stack}/authorized_keys &
+         apt-get -y update
+         apt-get -y upgrade
+         aws --region ${AWS::Region} s3 cp s3://subscriptions-dist/${Stack}/${Stage}/content-authorisation-proxy/content-authorisation-proxy_0.1_all.deb /tmp
+         aws --region ${AWS::Region} s3 cp s3://subscriptions-private/${Stage}/cas-proxy.private.conf /etc/gu
+         dpkg -i /tmp/content-authorisation-proxy_0.1_all.deb
+         chown content-authorisation-proxy /etc/gu/cas-proxy.private.conf
+         chmod 0600 /etc/gu/cas-proxy.private.conf
+         wget https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+         sed -i -e "s/__DATE/$(date +%F)/" -e 's/__STAGE/${Stage}/' $CONF_DIR/logger.conf
+         python awslogs-agent-setup.py -nr ${AWS::Region} -c $CONF_DIR/logger.conf
+         systemctl enable awslogs
+         systemctl start awslogs
+        - {}
+
+  SubscriptionsAppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: PrivateBucket
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: s3:GetObject
+            Resource: arn:aws:s3:::subscriptions-private/*
+      - PolicyName: PushLogs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource:
+            - arn:aws:logs:*:*:*
+      - PolicyName: dynamoTable
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchGetItem
+            Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/cas-auth-${Stage}'
+      - PolicyName: PushMetrics
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+  SubscriptionsAppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+      - !Ref 'SubscriptionsAppRole'
+  CASProxyElasticLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      Listeners:
+      - LoadBalancerPort: '443'
+        InstancePort: 9300
+        Protocol: HTTPS
+        SSLCertificateId: !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/4055df40-9561-423c-962b-f78f3ce70434
+      SecurityGroups:
+      - !Ref 'LoadBalancerSecurityGroup'
+      Subnets: !Ref 'Subnets'
+      HealthCheck:
+        Target: HTTP:9300/healthcheck
+        HealthyThreshold: '2'
+        UnhealthyThreshold: '2'
+        Interval: '10'
+        Timeout: '5'
+      ConnectionDrainingPolicy:
+        Enabled: 'true'
+        Timeout: '60'
+      CrossZone: 'true'
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permit incoming HTTP access on port 80, egress to port 9300
+      VpcId: !Ref 'VpcId'
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: '9300'
+        ToPort: '9300'
+        CidrIp: 0.0.0.0/0
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open up SSH access and enable HTTP access on the configured
+        port
+      VpcId: !Ref 'VpcId'
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 77.91.248.0/21
+      - IpProtocol: tcp
+        FromPort: '9300'
+        ToPort: '9300'
+        CidrIp: 77.91.248.0/21
+      - IpProtocol: tcp
+        FromPort: '9300'
+        ToPort: '9300'
+        SourceSecurityGroupId: !Ref 'LoadBalancerSecurityGroup'
+  CASProxyELBDNSrecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !FindInMap [StageVariables, !Ref 'Stage', HostedZone]
+      Name: !FindInMap [StageVariables, !Ref 'Stage', DomainName]
+      Comment: CNAME for AWS ELB
+      Type: CNAME
+      TTL: '120'
+      ResourceRecords:
+      - !GetAtt 'CASProxyElasticLoadBalancer.DNSName'
+  CASAuthTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: deviceId
+        AttributeType: S
+      - AttributeName: appId
+        AttributeType: S
+      KeySchema:
+      - AttributeName: deviceId
+        KeyType: HASH
+      - AttributeName: appId
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: !FindInMap [StageVariables, !Ref 'Stage', authReadCapacityUnits]
+        WriteCapacityUnits: !FindInMap [StageVariables, !Ref 'Stage', authWriteCapacityUnits]
+      TableName: !Sub 'cas-auth-${Stage}'
+Outputs:
+  URL:
+    Description: URL of the content-authorisation-proxy website
+    Value: !Sub 'http://${CASProxyElasticLoadBalancer.DNSName}'
