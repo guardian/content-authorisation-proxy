@@ -169,7 +169,7 @@ Resources:
       - LoadBalancerPort: '443'
         InstancePort: 9300
         Protocol: HTTPS
-        SSLCertificateId: arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/4055df40-9561-423c-962b-f78f3ce70434
+        SSLCertificateId: !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/4055df40-9561-423c-962b-f78f3ce70434
       SecurityGroups:
       - !Ref 'LoadBalancerSecurityGroup'
       Subnets: !Ref 'Subnets'
