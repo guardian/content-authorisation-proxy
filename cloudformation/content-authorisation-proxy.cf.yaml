@@ -127,6 +127,9 @@ Resources:
           - Effect: Allow
             Action: s3:GetObject
             Resource: arn:aws:s3:::subscriptions-private/*
+          - Effect: Allow
+            Action: s3:GetObject
+            Resource: !Sub 'arn:aws:s3:::subscriptions-dist/subscriptions/${Stage}/content-authorisation-proxy/*'
       - PolicyName: PushLogs
         PolicyDocument:
           Version: '2012-10-17'
