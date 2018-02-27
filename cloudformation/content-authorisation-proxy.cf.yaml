@@ -74,7 +74,7 @@ Resources:
         Value: !Ref 'Stack'
         PropagateAtLaunch: 'true'
       - Key: App
-        Value: content-authorisation-proxy
+        Value: !Ref 'App'
         PropagateAtLaunch: 'true'
       - Key: Stage
         Value: !Ref 'Stage'
