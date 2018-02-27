@@ -24,6 +24,11 @@ Parameters:
     AllowedValues:
     - CODE
     - PROD
+  App:
+    Type: String
+    Default: content-authorisation-proxy
+    AllowedValues:
+    - content-authorisation-proxy
   InstanceType:
     Type: String
     Description: EC2 instance type
@@ -71,7 +76,7 @@ Resources:
         Value: !Ref 'Stack'
         PropagateAtLaunch: 'true'
       - Key: App
-        Value: content-authorisation-proxy
+        Value: !Ref 'App'
         PropagateAtLaunch: 'true'
       - Key: Stage
         Value: !Ref 'Stage'
@@ -95,8 +100,8 @@ Resources:
          wget -N --directory-prefix=/home/ubuntu/.ssh https://s3-eu-west-1.amazonaws.com/subscriptions-dist/${Stack}/authorized_keys &
          apt-get -y update
          apt-get -y upgrade
-         aws --region ${AWS::Region} s3 cp s3://subscriptions-dist/${Stack}/${Stage}/content-authorisation-proxy/content-authorisation-proxy_0.1_all.deb /tmp
-         aws --region ${AWS::Region} s3 cp s3://subscriptions-private/${Stage}/cas-proxy.private.conf /etc/gu
+         aws --region ${AWS::Region} s3 cp s3://subscriptions-dist/${Stack}/${Stage}/${App}/content-authorisation-proxy_0.1_all.deb /tmp
+         aws --region ${AWS::Region} s3 cp s3://gu-reader-revenue-private/${Stack}/${App}/${Stage}/cas-proxy.private.conf /etc/gu
          dpkg -i /tmp/content-authorisation-proxy_0.1_all.deb
          chown content-authorisation-proxy /etc/gu/cas-proxy.private.conf
          chmod 0600 /etc/gu/cas-proxy.private.conf
@@ -126,7 +131,7 @@ Resources:
           Statement:
           - Effect: Allow
             Action: s3:GetObject
-            Resource: arn:aws:s3:::subscriptions-private/*
+            Resource: !Sub 'arn:aws:s3:::gu-reader-revenue-private/${Stack}/${App}/${Stage}/*'
           - Effect: Allow
             Action: s3:GetObject
             Resource: !Sub 'arn:aws:s3:::subscriptions-dist/subscriptions/${Stage}/content-authorisation-proxy/*'
