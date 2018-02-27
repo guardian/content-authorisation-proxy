@@ -63,11 +63,11 @@ Sample response:
 
    You need membership AWS credentials from Janus. 
    
-2. Download our private keys from the `subscriptions-private` S3 bucket. 
+2. Download our private keys from the `gu-reader-revenue-private` S3 bucket. 
 
     If you have the AWS CLI set up you can run
     ```
-    aws s3 cp s3://subscriptions-private/DEV/cas-proxy.private.conf /etc/gu --profile membership
+    aws s3 cp s3://gu-reader-revenue-private/subscriptions/content-authorisation-proxy/DEV/cas-proxy.private.conf /etc/gu --profile membership
     ```
 3. Run `sbt` then `devrun`.  
     

@@ -24,6 +24,9 @@ Parameters:
     AllowedValues:
     - CODE
     - PROD
+  App:
+    Type: String
+    Default: content-authorisation-proxy
   InstanceType:
     Type: String
     Description: EC2 instance type
