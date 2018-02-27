@@ -27,6 +27,8 @@ Parameters:
   App:
     Type: String
     Default: content-authorisation-proxy
+    AllowedValues:
+    - content-authorisation-proxy
   InstanceType:
     Type: String
     Description: EC2 instance type
