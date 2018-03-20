@@ -144,7 +144,7 @@ Resources:
             - logs:*
             Resource:
             - arn:aws:logs:*:*:*
-      - PolicyName: dynamoTable
+      - PolicyName: unEncryptedDynamoTable
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -156,6 +156,18 @@ Resources:
             - dynamodb:DeleteItem
             - dynamodb:BatchGetItem
             Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/cas-auth-${Stage}'
+      - PolicyName: dynamoTable
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchGetItem
+            Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/daily-edition-trial-periods-${Stage}'
       - PolicyName: PushMetrics
         PolicyDocument:
           Version: '2012-10-17'
