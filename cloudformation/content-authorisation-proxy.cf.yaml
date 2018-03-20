@@ -156,7 +156,7 @@ Resources:
             - dynamodb:DeleteItem
             - dynamodb:BatchGetItem
             Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/cas-auth-${Stage}'
-   - PolicyName: dynamoTable
+      - PolicyName: dynamoTable
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
