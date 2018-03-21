@@ -144,18 +144,6 @@ Resources:
             - logs:*
             Resource:
             - arn:aws:logs:*:*:*
-      - PolicyName: unEncryptedDynamoTable
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-            - dynamodb:PutItem
-            - dynamodb:GetItem
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
-            - dynamodb:BatchGetItem
-            Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/cas-auth-${Stage}'
       - PolicyName: dynamoTable
         PolicyDocument:
           Version: '2012-10-17'
@@ -247,23 +235,6 @@ Resources:
       TTL: '120'
       ResourceRecords:
       - !GetAtt 'CASProxyElasticLoadBalancer.DNSName'
-  CASAuthTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      AttributeDefinitions:
-      - AttributeName: deviceId
-        AttributeType: S
-      - AttributeName: appId
-        AttributeType: S
-      KeySchema:
-      - AttributeName: deviceId
-        KeyType: HASH
-      - AttributeName: appId
-        KeyType: RANGE
-      ProvisionedThroughput:
-        ReadCapacityUnits: !FindInMap [StageVariables, !Ref 'Stage', authReadCapacityUnits]
-        WriteCapacityUnits: !FindInMap [StageVariables, !Ref 'Stage', authWriteCapacityUnits]
-      TableName: !Sub 'cas-auth-${Stage}'
 Outputs:
   URL:
     Description: URL of the content-authorisation-proxy website
