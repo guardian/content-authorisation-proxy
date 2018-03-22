@@ -27,7 +27,7 @@ object Bootstrap extends App {
   private val newProductIds = productIds(stage)
 
   val zuoraService = new ZuoraService(Soap.client)
-  val catalogService = new CatalogService[Future](newProductIds, Rest.simpleClient, Await.result(_, 10.seconds), stage)
+  val catalogService = new CatalogService[Future](newProductIds, Rest.patientClient, Await.result(_, 60.seconds), stage)
 
   private val map = this.catalogService.catalog.map(_.fold[CatalogMap](error => {println(s"error: ${error.list.mkString}"); Map()}, _.map))
   val commonSubscriptionService = new CommonSubscriptionService[Future](newProductIds, map, Rest.simpleClient, zuoraService.getAccountIds)

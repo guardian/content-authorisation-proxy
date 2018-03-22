@@ -25,5 +25,6 @@ object Zuora {
     val apiConfig = ZuoraApiConfig.rest(touchpointConfig, appStage)
     val metrics = new ServiceMetrics(appStage, appName, "zuora-rest-client")
     val simpleClient = new rest.SimpleClient[Future](apiConfig, futureRunner)
+    val patientClient = new rest.SimpleClient[Future](apiConfig, configurableFutureRunner(60.seconds))
   }
 }
