@@ -1,3 +1,7 @@
+#---------
+# THIS IS NO LONGER USED - see the lambdas in the api layer https://github.com/guardian/zuora-auto-cancel
+#---------
+
 # content-authorisation-proxy
 
 Find out if a download of the digital edition is allowed. 
