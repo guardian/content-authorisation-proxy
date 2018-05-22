@@ -1,3 +1,12 @@
+# ---------
+# THIS IS NO LONGER USED -
+see the lambdas in the api layer https://github.com/guardian/zuora-auto-cancel
+that's where the /subs endpoint is now.
+/auth and the api gateway are defined here:
+https://github.com/guardian/digital-subscription-authorisation
+
+# ---------
+
 # content-authorisation-proxy
 
 Find out if a download of the digital edition is allowed. 
